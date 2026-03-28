@@ -1,6 +1,7 @@
 import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 
+import { mcp } from "./modules/mcp";
 import { paniers } from "./modules/paniers";
 
 const app = new Elysia()
@@ -22,6 +23,7 @@ const app = new Elysia()
     }),
   )
   .use(paniers)
+  .use(mcp)
   .get("/", ({ redirect }) => redirect("https://thanaen.dev"), {
     detail: { hide: true },
   });

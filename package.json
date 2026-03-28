@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@elysiajs/openapi": "^1.4.14",
+    "@modelcontextprotocol/sdk": "^1.28.0",
     "elysia": "latest",
     "node-html-parser": "^7.1.0"
   },
