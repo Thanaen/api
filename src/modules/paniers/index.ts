@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, ElysiaCustomStatusResponse, t } from "elysia";
 
 import { secondsUntilNextSaturday1am } from "./cache";
 import { panierModels } from "./model";
@@ -11,8 +11,10 @@ const errorResponse = t.Object(
 
 export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/paniers" })
   .use(panierModels)
-  .onAfterHandle(({ set }) => {
-    if ((set.status ?? 200) === 200) {
+  .onAfterHandle(({ set, response }) => {
+    const statusCode =
+      response instanceof ElysiaCustomStatusResponse ? response.code : (set.status ?? 200);
+    if (statusCode === 200) {
       const sMaxAge = secondsUntilNextSaturday1am();
       set.headers["cache-control"] =
         `public, max-age=300, s-maxage=${sMaxAge}, stale-while-revalidate=3600`;
