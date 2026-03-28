@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 
+import { secondsUntilNextSaturday1am } from "./cache";
 import { panierModels } from "./model";
 import { PanierService } from "./service";
 
@@ -7,6 +8,16 @@ const errorResponse = t.Object({ message: t.String() });
 
 export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/paniers" })
   .use(panierModels)
+  .mapResponse(({ set, responseValue }) => {
+    const status = set.status ?? (responseValue instanceof Response ? responseValue.status : 200);
+    if (status === 200) {
+      const sMaxAge = secondsUntilNextSaturday1am();
+      set.headers["cache-control"] =
+        `public, max-age=300, s-maxage=${sMaxAge}, stale-while-revalidate=3600`;
+    } else {
+      set.headers["cache-control"] = "no-store";
+    }
+  })
   .get(
     "/",
     async ({ status }) => {

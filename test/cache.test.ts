@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { Cache } from "../src/modules/paniers/cache";
+import { Cache, secondsUntilNextSaturday1am } from "../src/modules/paniers/cache";
 
 afterEach(() => {
   Cache.clear();
@@ -36,5 +36,17 @@ describe("Cache", () => {
     Cache.set("key", "old", 60_000);
     Cache.set("key", "new", 60_000);
     expect(Cache.get<string>("key")).toBe("new");
+  });
+});
+
+describe("secondsUntilNextSaturday1am", () => {
+  test("returns a positive number", () => {
+    const seconds = secondsUntilNextSaturday1am();
+    expect(seconds).toBeGreaterThanOrEqual(60);
+  });
+
+  test("never exceeds 7 days", () => {
+    const seconds = secondsUntilNextSaturday1am();
+    expect(seconds).toBeLessThanOrEqual(7 * 24 * 3600);
   });
 });

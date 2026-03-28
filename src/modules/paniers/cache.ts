@@ -1,3 +1,16 @@
+export function secondsUntilNextSaturday1am(): number {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0=Sun, 6=Sat
+  let daysUntil = (6 - dayOfWeek + 7) % 7;
+  if (daysUntil === 0 && now.getUTCHours() >= 1) {
+    daysUntil = 7;
+  }
+  const target = new Date(now);
+  target.setUTCDate(target.getUTCDate() + daysUntil);
+  target.setUTCHours(1, 0, 0, 0);
+  return Math.max(60, Math.floor((target.getTime() - now.getTime()) / 1000));
+}
+
 const store = new Map<string, { data: unknown; expiresAt: number }>();
 
 export abstract class Cache {
