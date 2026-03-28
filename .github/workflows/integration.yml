@@ -1,0 +1,39 @@
+name: Integration Tests
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Monday 8am UTC
+  workflow_dispatch:
+
+jobs:
+  scraper-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run test:integration
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = "scraper-health";
+            const title = "Integration tests failed: scraper may be broken";
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: label,
+              state: "open",
+            });
+
+            if (issues.length > 0) return;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `The weekly integration test failed. The upstream site may have changed its HTML structure.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: [label],
+            });
