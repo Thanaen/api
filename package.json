@@ -3,7 +3,9 @@
   "version": "1.0.50",
   "module": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bun test",
+    "test:unit": "bun test test/cache.test.ts test/parsing.test.ts",
+    "test:integration": "bun test test/endpoints.test.ts",
     "dev": "bun run --watch src/index.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
@@ -12,7 +14,8 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
-    "elysia": "latest"
+    "elysia": "latest",
+    "node-html-parser": "^7.1.0"
   },
   "devDependencies": {
     "bun-types": "latest",
