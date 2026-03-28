@@ -4,7 +4,10 @@ import { secondsUntilNextSaturday1am } from "./cache";
 import { panierModels } from "./model";
 import { PanierService } from "./service";
 
-const errorResponse = t.Object({ message: t.String() });
+const errorResponse = t.Object(
+  { message: t.String({ description: "Human-readable error message" }) },
+  { description: "Error response" },
+);
 
 export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/paniers" })
   .use(panierModels)
@@ -32,7 +35,13 @@ export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/p
         200: "panier.list",
         502: errorResponse,
       },
-      detail: { summary: "List all paniers de saison", tags: ["Paniers de l'Adour"] },
+      detail: {
+        operationId: "listPaniers",
+        summary: "List all paniers de saison",
+        description:
+          "Returns all seasonal baskets currently available on panierdeladour.com. Each entry includes the basket name, price, and image. Responses are cached and include a `lastUpdated` timestamp indicating data freshness.",
+        tags: ["Paniers de l'Adour"],
+      },
     },
   )
   .get(
@@ -47,12 +56,20 @@ export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/p
       }
     },
     {
-      params: t.Object({ id: t.Number() }),
+      params: t.Object({
+        id: t.Number({ description: "Unique product ID of the basket", example: 42 }),
+      }),
       response: {
         200: "panier.detail",
         404: errorResponse,
         502: errorResponse,
       },
-      detail: { summary: "Get panier detail by ID", tags: ["Paniers de l'Adour"] },
+      detail: {
+        operationId: "getPanierById",
+        summary: "Get panier detail by ID",
+        description:
+          "Returns full details for a specific seasonal basket, including its description, weight, servings, and a composition table listing each product with its geographic origin. Returns 404 if no basket matches the given ID.",
+        tags: ["Paniers de l'Adour"],
+      },
     },
   );

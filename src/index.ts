@@ -9,16 +9,26 @@ const app = new Elysia()
     openapi({
       documentation: {
         info: {
-          title: "API",
+          title: "Thanaen API",
           version: "1.0.0",
-          description: "Thanaen's general-purpose API",
+          description:
+            "Public API providing structured JSON access to data scraped from partner sites. Responses are cached and include a `lastUpdated` timestamp indicating when the upstream data was last fetched.",
+          contact: {
+            name: "Thanaen",
+            url: "https://thanaen.dev",
+          },
         },
         tags: [
           {
             name: "Paniers de l'Adour",
-            description: "Scraper for panierdeladour.com seasonal baskets",
+            description:
+              "Seasonal baskets from panierdeladour.com — list available baskets or get full details including composition and product origins.",
           },
         ],
+        externalDocs: {
+          description: "Source code",
+          url: "https://github.com/Thanaen/api",
+        },
       },
     }),
   )
