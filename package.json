@@ -16,6 +16,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@elysiajs/openapi": "^1.4.14",
     "elysia": "latest",
     "node-html-parser": "^7.1.0"
   },

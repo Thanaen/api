@@ -21,7 +21,7 @@ export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/p
         200: "panier.list",
         502: errorResponse,
       },
-      detail: { summary: "List all paniers de saison" },
+      detail: { summary: "List all paniers de saison", tags: ["Paniers de l'Adour"] },
     },
   )
   .get(
@@ -42,6 +42,6 @@ export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/p
         404: errorResponse,
         502: errorResponse,
       },
-      detail: { summary: "Get panier detail by ID" },
+      detail: { summary: "Get panier detail by ID", tags: ["Paniers de l'Adour"] },
     },
   );
