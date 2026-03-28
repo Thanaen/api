@@ -23,9 +23,13 @@ export const mcp = new Elysia({ name: "mcp", prefix: "/mcp" })
       "Content-Type, mcp-session-id, Last-Event-ID, mcp-protocol-version",
     "access-control-expose-headers": "mcp-session-id, mcp-protocol-version",
   })
-  .all("/", async ({ request }) => {
-    const transport = new WebStandardStreamableHTTPServerTransport();
-    const server = createMcpServer();
-    await server.connect(transport);
-    return transport.handleRequest(request);
-  });
+  .all(
+    "/",
+    async ({ request }) => {
+      const transport = new WebStandardStreamableHTTPServerTransport();
+      const server = createMcpServer();
+      await server.connect(transport);
+      return transport.handleRequest(request);
+    },
+    { detail: { hide: true } },
+  );
