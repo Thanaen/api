@@ -1,0 +1,8 @@
+{
+  "entry": ["src/index.ts"],
+  "format": "esm",
+  "platform": "node",
+  "outDir": "dist",
+  "minify": true,
+  "sourcemap": true
+}

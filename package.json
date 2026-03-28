@@ -1,12 +1,14 @@
 {
   "name": "api",
   "version": "1.0.50",
+  "type": "module",
   "module": "src/index.js",
   "scripts": {
     "test": "bun test",
     "test:unit": "bun test test/cache.test.ts test/parsing.test.ts",
     "test:integration": "bun test test/endpoints.test.ts",
-    "dev": "bun run --watch src/index.ts",
+    "dev": "bun run --watch src/dev.ts",
+    "build": "tsdown",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
@@ -22,6 +24,7 @@
     "lefthook": "^2.1.4",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.18.1"
+    "oxlint-tsgolint": "^0.18.1",
+    "tsdown": "^0.21.7"
   }
 }
