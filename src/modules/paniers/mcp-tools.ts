@@ -6,7 +6,7 @@ import { PanierService } from "./service";
 export function registerPanierTools(server: McpServer) {
   server.tool(
     "list_paniers",
-    "List all seasonal baskets from panierdeladour.com with name, price, and image",
+    "List all seasonal baskets from panierdeladour.com with name, price, and image. Includes a lastUpdated timestamp.",
     async () => {
       try {
         const paniers = await PanierService.list();
@@ -22,7 +22,7 @@ export function registerPanierTools(server: McpServer) {
 
   server.tool(
     "get_panier_detail",
-    "Get full detail for a seasonal basket by ID, including composition and origin of items",
+    "Get full detail for a seasonal basket by ID, including composition and origin of items. Includes a lastUpdated timestamp.",
     { id: z.number().describe("The basket product ID") },
     async ({ id }) => {
       try {

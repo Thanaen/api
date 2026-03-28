@@ -39,6 +39,28 @@ describe("Cache", () => {
   });
 });
 
+describe("Cache.getWithMeta", () => {
+  test("returns null for missing key", () => {
+    expect(Cache.getWithMeta("nonexistent")).toBeNull();
+  });
+
+  test("returns data with lastUpdated ISO string", () => {
+    Cache.set("key", { a: 1 }, 60_000);
+    const result = Cache.getWithMeta<{ a: number }>("key");
+    expect(result).not.toBeNull();
+    expect(result!.data).toEqual({ a: 1 });
+    expect(typeof result!.lastUpdated).toBe("string");
+    expect(new Date(result!.lastUpdated).toISOString()).toBe(result!.lastUpdated);
+  });
+
+  test("returns null after TTL expires", () => {
+    Cache.set("key", "value", 1);
+    const start = Date.now();
+    while (Date.now() - start < 5);
+    expect(Cache.getWithMeta("key")).toBeNull();
+  });
+});
+
 describe("secondsUntilNextSaturday1am", () => {
   test("returns a positive number", () => {
     const seconds = secondsUntilNextSaturday1am();

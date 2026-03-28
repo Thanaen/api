@@ -1,3 +1,4 @@
+import type { TSchema } from "@sinclair/typebox";
 import { Elysia, t } from "elysia";
 
 export const CompositionItem = t.Object({
@@ -27,8 +28,16 @@ export const PanierDetail = t.Object({
 });
 export type PanierDetail = typeof PanierDetail.static;
 
+export const TimestampedResponse = <T extends TSchema>(dataSchema: T) =>
+  t.Object({
+    data: dataSchema,
+    lastUpdated: t.String({ format: "date-time" }),
+  });
+
+export type TimestampedResult<T> = { data: T; lastUpdated: string };
+
 export const panierModels = new Elysia({ name: "paniers.models" }).model({
   "panier.summary": PanierSummary,
-  "panier.detail": PanierDetail,
-  "panier.list": t.Array(PanierSummary),
+  "panier.detail": TimestampedResponse(PanierDetail),
+  "panier.list": TimestampedResponse(t.Array(PanierSummary)),
 });

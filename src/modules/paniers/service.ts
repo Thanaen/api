@@ -1,7 +1,7 @@
 import { parse } from "node-html-parser";
 
 import { Cache } from "./cache";
-import type { CompositionItem, PanierDetail, PanierSummary } from "./model";
+import type { CompositionItem, PanierDetail, PanierSummary, TimestampedResult } from "./model";
 
 const BASE_URL = "https://www.panierdeladour.com";
 const LISTING_PATH = "/5-les-paniers-de-saison";
@@ -93,22 +93,22 @@ export function parseDetailHtml(html: string, id: number): Omit<PanierDetail, "i
 }
 
 export abstract class PanierService {
-  static async list(): Promise<PanierSummary[]> {
-    const cached = Cache.get<PanierSummary[]>("paniers:list");
+  static async list(): Promise<TimestampedResult<PanierSummary[]>> {
+    const cached = Cache.getWithMeta<PanierSummary[]>("paniers:list");
     if (cached) return cached;
 
     const html = await fetchPage(BASE_URL + LISTING_PATH);
     const paniers = parseListingHtml(html);
 
     Cache.set("paniers:list", paniers, LISTING_CACHE_TTL);
-    return paniers;
+    return { data: paniers, lastUpdated: new Date().toISOString() };
   }
 
-  static async detail(id: number): Promise<PanierDetail | null> {
-    const cached = Cache.get<PanierDetail>(`paniers:detail:${id}`);
+  static async detail(id: number): Promise<TimestampedResult<PanierDetail> | null> {
+    const cached = Cache.getWithMeta<PanierDetail>(`paniers:detail:${id}`);
     if (cached) return cached;
 
-    const paniers = await this.list();
+    const { data: paniers } = await this.list();
     const panier = paniers.find((p) => p.id === id);
     if (!panier) return null;
 
@@ -116,6 +116,6 @@ export abstract class PanierService {
     const detail: PanierDetail = { id, ...parseDetailHtml(html, id) };
 
     Cache.set(`paniers:detail:${id}`, detail, DETAIL_CACHE_TTL);
-    return detail;
+    return { data: detail, lastUpdated: new Date().toISOString() };
   }
 }

@@ -17,11 +17,14 @@ describe("GET /paniersdeladour/paniers", () => {
       const res = await handle("/");
       expect(res.status).toBe(200);
 
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
-      expect(data.length).toBeGreaterThan(0);
+      const body = await res.json();
+      expect(body).toHaveProperty("lastUpdated");
+      expect(typeof body.lastUpdated).toBe("string");
+      expect(body).toHaveProperty("data");
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
 
-      for (const p of data) {
+      for (const p of body.data) {
         expect(p).toHaveProperty("id");
         expect(p).toHaveProperty("name");
         expect(p).toHaveProperty("price");
@@ -43,12 +46,15 @@ describe("GET /paniersdeladour/paniers/:id", () => {
       const res = await handle("/1");
       expect(res.status).toBe(200);
 
-      const data = await res.json();
-      expect(data.id).toBe(1);
-      expect(data.name).toBeTruthy();
-      expect(typeof data.price).toBe("number");
-      expect(data.description).toBeTruthy();
-      expect(Array.isArray(data.composition)).toBe(true);
+      const body = await res.json();
+      expect(body).toHaveProperty("lastUpdated");
+      expect(typeof body.lastUpdated).toBe("string");
+      expect(body).toHaveProperty("data");
+      expect(body.data.id).toBe(1);
+      expect(body.data.name).toBeTruthy();
+      expect(typeof body.data.price).toBe("number");
+      expect(body.data.description).toBeTruthy();
+      expect(Array.isArray(body.data.composition)).toBe(true);
     },
     { timeout: 15_000 },
   );

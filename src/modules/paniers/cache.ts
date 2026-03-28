@@ -11,7 +11,7 @@ export function secondsUntilNextSaturday1am(): number {
   return Math.max(60, Math.floor((target.getTime() - now.getTime()) / 1000));
 }
 
-const store = new Map<string, { data: unknown; expiresAt: number }>();
+const store = new Map<string, { data: unknown; expiresAt: number; createdAt: number }>();
 
 export abstract class Cache {
   static get<T>(key: string): T | null {
@@ -23,8 +23,17 @@ export abstract class Cache {
     return entry.data as T;
   }
 
+  static getWithMeta<T>(key: string): { data: T; lastUpdated: string } | null {
+    const entry = store.get(key);
+    if (!entry || Date.now() > entry.expiresAt) {
+      store.delete(key);
+      return null;
+    }
+    return { data: entry.data as T, lastUpdated: new Date(entry.createdAt).toISOString() };
+  }
+
   static set<T>(key: string, data: T, ttlMs: number): void {
-    store.set(key, { data, expiresAt: Date.now() + ttlMs });
+    store.set(key, { data, expiresAt: Date.now() + ttlMs, createdAt: Date.now() });
   }
 
   static clear(): void {

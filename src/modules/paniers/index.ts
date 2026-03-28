@@ -39,9 +39,9 @@ export const paniers = new Elysia({ name: "paniers", prefix: "/paniersdeladour/p
     "/:id",
     async ({ params: { id }, status }) => {
       try {
-        const detail = await PanierService.detail(id);
-        if (!detail) return status(404, { message: "Panier not found" });
-        return detail;
+        const result = await PanierService.detail(id);
+        if (!result) return status(404, { message: "Panier not found" });
+        return result;
       } catch {
         return status(502, { message: "Failed to fetch upstream data" });
       }
