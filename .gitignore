@@ -47,5 +47,10 @@ package-lock.json
 
 # build output
 /dist
+
+# env
 .env*.local
+.env
+
+# vercel
 .vercel
