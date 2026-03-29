@@ -47,3 +47,4 @@ package-lock.json
 
 # build output
 /dist
+.env*.local
