@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 
 import { paniers } from "../src/modules/paniers";
 import { Cache } from "../src/modules/paniers/cache";
+import { PanierService } from "../src/modules/paniers/service";
 
 const handle = (path: string) =>
   paniers.handle(new Request(`http://localhost/paniersdeladour/paniers${path}`));
@@ -70,4 +71,40 @@ describe("GET /paniersdeladour/paniers/:id", () => {
     },
     { timeout: 15_000 },
   );
+});
+
+const mockSummary = {
+  id: 1,
+  name: "Le Panier Test",
+  price: 20,
+  url: "https://www.panierdeladour.com/paniers-de-saison/1-test.html",
+  imageUrl: "https://www.panierdeladour.com/img/p/1-100.jpg",
+};
+
+describe("cache-control headers", () => {
+  test("200 response sets a public cache-control header", async () => {
+    Cache.set("paniers:list", [mockSummary], 60_000);
+    const res = await handle("/");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toMatch(
+      /^public, max-age=300, s-maxage=\d+, stale-while-revalidate=3600$/,
+    );
+  });
+
+  test("404 response sets cache-control: no-store", async () => {
+    Cache.set("paniers:list", [mockSummary], 60_000);
+    const res = await handle("/999");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("502 response sets cache-control: no-store", async () => {
+    const spy = spyOn(PanierService, "list").mockImplementation(() =>
+      Promise.reject(new Error("upstream down")),
+    );
+    const res = await handle("/");
+    spy.mockRestore();
+    expect(res.status).toBe(502);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
 });
