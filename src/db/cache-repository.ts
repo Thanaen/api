@@ -12,10 +12,7 @@ export abstract class CacheRepository {
   }
 
   static async getWithMeta<T>(key: string): Promise<{ data: T; lastUpdated: string } | null> {
-    const db = getDb();
-    if (!db) return null;
-
-    const [row] = await db
+    const [row] = await getDb()
       .select({ data: panierCache.data, createdAt: panierCache.createdAt })
       .from(panierCache)
       .where(and(eq(panierCache.key, key), gt(panierCache.expiresAt, sql`now()`)))
@@ -28,30 +25,27 @@ export abstract class CacheRepository {
 
   static async set<T>(key: string, data: T, ttlMs: number): Promise<void> {
     const db = getDb();
-    if (!db) return;
-
-    const ttlSeconds = Math.floor(ttlMs / 1000);
+    const expiresAt = new Date(Date.now() + ttlMs);
     const jsonData = JSON.stringify(data);
 
     await db.execute(sql`
-      WITH inserted AS (
-        INSERT INTO panier_cache (key, data, expires_at)
-        VALUES (${key}, ${jsonData}::jsonb, now() + interval '${sql.raw(String(ttlSeconds))} seconds')
-      ),
-      keep AS (
-        SELECT id FROM panier_cache
-        WHERE key = ${key}
-        ORDER BY created_at DESC
-        LIMIT ${MAX_ENTRIES_PER_KEY}
-      )
+      INSERT INTO panier_cache (key, data, expires_at)
+      VALUES (${key}, ${jsonData}::jsonb, ${expiresAt})
+    `);
+
+    await db.execute(sql`
       DELETE FROM panier_cache
-      WHERE key = ${key} AND id NOT IN (SELECT id FROM keep)
+      WHERE key = ${key}
+        AND id NOT IN (
+          SELECT id FROM panier_cache
+          WHERE key = ${key}
+          ORDER BY created_at DESC
+          LIMIT ${MAX_ENTRIES_PER_KEY}
+        )
     `);
   }
 
   static async clear(): Promise<void> {
-    const db = getDb();
-    if (!db) return;
-    await db.delete(panierCache);
+    await getDb().delete(panierCache);
   }
 }

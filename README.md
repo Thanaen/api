@@ -21,13 +21,11 @@ The API uses a two-tier caching strategy to minimize upstream scraping:
 2. **L2 — Neon PostgreSQL** (`src/db/cache-repository.ts`): Persistent cache using Drizzle ORM over `@neondatabase/serverless`. Survives cold starts. Stores up to 4 historical entries per cache key.
 3. **Upstream scrape**: Falls through to scraping when both caches miss.
 
-The L2 layer is **optional**. If `DATABASE_URL` is not set or the database is unreachable, the API degrades gracefully to L1 + scrape.
-
 ### Environment Variables
 
 | Variable                    | Required | Description                                                             |
 | --------------------------- | -------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL`              | No       | Neon PostgreSQL connection string. If absent, L2 cache is disabled.     |
+| `DATABASE_URL`              | **Yes**  | Neon PostgreSQL connection string.                                      |
 | `NEON_LOCAL_FETCH_ENDPOINT` | No       | Set to `http://localhost:5432/sql` when using neon-local for local dev. |
 
 ### Local Database Setup

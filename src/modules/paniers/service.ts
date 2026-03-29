@@ -99,14 +99,10 @@ export abstract class PanierService {
     const cached = Cache.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
     if (cached) return cached;
 
-    try {
-      const dbCached = await CacheRepository.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
-      if (dbCached) {
-        Cache.set(LISTING_CACHE_KEY, dbCached.data, LISTING_CACHE_TTL);
-        return dbCached;
-      }
-    } catch (e) {
-      console.error("[L2 cache] read failed:", e);
+    const dbCached = await CacheRepository.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
+    if (dbCached) {
+      Cache.set(LISTING_CACHE_KEY, dbCached.data, LISTING_CACHE_TTL);
+      return dbCached;
     }
 
     const html = await fetchPage(BASE_URL + LISTING_PATH);
@@ -114,11 +110,7 @@ export abstract class PanierService {
     const lastUpdated = new Date().toISOString();
 
     Cache.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
-    try {
-      await CacheRepository.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
-    } catch (e) {
-      console.error("[L2 cache] write failed:", e);
-    }
+    await CacheRepository.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
 
     return { data: paniers, lastUpdated };
   }
@@ -129,14 +121,10 @@ export abstract class PanierService {
     const cached = Cache.getWithMeta<PanierDetail>(cacheKey);
     if (cached) return cached;
 
-    try {
-      const dbCached = await CacheRepository.getWithMeta<PanierDetail>(cacheKey);
-      if (dbCached) {
-        Cache.set(cacheKey, dbCached.data, DETAIL_CACHE_TTL);
-        return dbCached;
-      }
-    } catch (e) {
-      console.error("[L2 cache] read failed:", e);
+    const dbCached = await CacheRepository.getWithMeta<PanierDetail>(cacheKey);
+    if (dbCached) {
+      Cache.set(cacheKey, dbCached.data, DETAIL_CACHE_TTL);
+      return dbCached;
     }
 
     const { data: paniers } = await this.list();
@@ -148,11 +136,7 @@ export abstract class PanierService {
     const lastUpdated = new Date().toISOString();
 
     Cache.set(cacheKey, detail, DETAIL_CACHE_TTL);
-    try {
-      await CacheRepository.set(cacheKey, detail, DETAIL_CACHE_TTL);
-    } catch (e) {
-      console.error("[L2 cache] write failed:", e);
-    }
+    await CacheRepository.set(cacheKey, detail, DETAIL_CACHE_TTL);
 
     return { data: detail, lastUpdated };
   }
