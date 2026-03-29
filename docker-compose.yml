@@ -1,0 +1,14 @@
+services:
+  db:
+    image: neondatabase/neon_local:latest
+    ports:
+      - "5432:5432"
+    environment:
+      NEON_API_KEY: ${NEON_API_KEY}
+      NEON_PROJECT_ID: ${NEON_PROJECT_ID}
+      BRANCH_ID: ${BRANCH_ID}
+      DELETE_BRANCH: "false"
+
+# App env vars for local dev with neon-local:
+#   DATABASE_URL=postgres://neon:npg@localhost:5432/neondb
+#   NEON_LOCAL_FETCH_ENDPOINT=http://localhost:5432/sql

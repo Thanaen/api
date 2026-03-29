@@ -1,11 +1,13 @@
 import { parse } from "node-html-parser";
 
+import { CacheRepository } from "../../db/cache-repository";
 import { Cache } from "./cache";
 import type { CompositionItem, PanierDetail, PanierSummary, TimestampedResult } from "./model";
 
 const BASE_URL = "https://www.panierdeladour.com";
 const LISTING_PATH = "/5-les-paniers-de-saison";
 const LISTING_CACHE_TTL = 15 * 60 * 1000;
+const LISTING_CACHE_KEY = "paniers:list";
 const DETAIL_CACHE_TTL = 60 * 60 * 1000;
 const FETCH_TIMEOUT = 10_000;
 
@@ -94,19 +96,36 @@ export function parseDetailHtml(html: string, id: number): Omit<PanierDetail, "i
 
 export abstract class PanierService {
   static async list(): Promise<TimestampedResult<PanierSummary[]>> {
-    const cached = Cache.getWithMeta<PanierSummary[]>("paniers:list");
+    const cached = Cache.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
     if (cached) return cached;
+
+    const dbCached = await CacheRepository.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
+    if (dbCached) {
+      Cache.set(LISTING_CACHE_KEY, dbCached.data, LISTING_CACHE_TTL);
+      return dbCached;
+    }
 
     const html = await fetchPage(BASE_URL + LISTING_PATH);
     const paniers = parseListingHtml(html);
+    const lastUpdated = new Date().toISOString();
 
-    Cache.set("paniers:list", paniers, LISTING_CACHE_TTL);
-    return { data: paniers, lastUpdated: new Date().toISOString() };
+    Cache.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
+    await CacheRepository.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
+
+    return { data: paniers, lastUpdated };
   }
 
   static async detail(id: number): Promise<TimestampedResult<PanierDetail> | null> {
-    const cached = Cache.getWithMeta<PanierDetail>(`paniers:detail:${id}`);
+    const cacheKey = `paniers:detail:${id}`;
+
+    const cached = Cache.getWithMeta<PanierDetail>(cacheKey);
     if (cached) return cached;
+
+    const dbCached = await CacheRepository.getWithMeta<PanierDetail>(cacheKey);
+    if (dbCached) {
+      Cache.set(cacheKey, dbCached.data, DETAIL_CACHE_TTL);
+      return dbCached;
+    }
 
     const { data: paniers } = await this.list();
     const panier = paniers.find((p) => p.id === id);
@@ -114,8 +133,11 @@ export abstract class PanierService {
 
     const html = await fetchPage(panier.url);
     const detail: PanierDetail = { id, ...parseDetailHtml(html, id) };
+    const lastUpdated = new Date().toISOString();
 
-    Cache.set(`paniers:detail:${id}`, detail, DETAIL_CACHE_TTL);
-    return { data: detail, lastUpdated: new Date().toISOString() };
+    Cache.set(cacheKey, detail, DETAIL_CACHE_TTL);
+    await CacheRepository.set(cacheKey, detail, DETAIL_CACHE_TTL);
+
+    return { data: detail, lastUpdated };
   }
 }
