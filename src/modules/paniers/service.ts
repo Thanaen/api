@@ -1,14 +1,12 @@
 import { parse } from "node-html-parser";
 
 import { CacheRepository } from "../../db/cache-repository";
-import { Cache } from "./cache";
+import { Cache, secondsUntilNextSaturday1am } from "./cache";
 import type { CompositionItem, PanierDetail, PanierSummary, TimestampedResult } from "./model";
 
 const BASE_URL = "https://www.panierdeladour.com";
 const LISTING_PATH = "/5-les-paniers-de-saison";
-const LISTING_CACHE_TTL = 15 * 60 * 1000;
 const LISTING_CACHE_KEY = "paniers:list";
-const DETAIL_CACHE_TTL = 60 * 60 * 1000;
 const FETCH_TIMEOUT = 10_000;
 
 export function parsePrice(text: string): number {
@@ -101,7 +99,7 @@ export abstract class PanierService {
 
     const dbCached = await CacheRepository.getWithMeta<PanierSummary[]>(LISTING_CACHE_KEY);
     if (dbCached) {
-      Cache.set(LISTING_CACHE_KEY, dbCached.data, LISTING_CACHE_TTL);
+      Cache.set(LISTING_CACHE_KEY, dbCached.data, secondsUntilNextSaturday1am() * 1000);
       return dbCached;
     }
 
@@ -109,8 +107,8 @@ export abstract class PanierService {
     const paniers = parseListingHtml(html);
     const lastUpdated = new Date().toISOString();
 
-    Cache.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
-    await CacheRepository.set(LISTING_CACHE_KEY, paniers, LISTING_CACHE_TTL);
+    Cache.set(LISTING_CACHE_KEY, paniers, secondsUntilNextSaturday1am() * 1000);
+    await CacheRepository.set(LISTING_CACHE_KEY, paniers, secondsUntilNextSaturday1am() * 1000);
 
     return { data: paniers, lastUpdated };
   }
@@ -123,7 +121,7 @@ export abstract class PanierService {
 
     const dbCached = await CacheRepository.getWithMeta<PanierDetail>(cacheKey);
     if (dbCached) {
-      Cache.set(cacheKey, dbCached.data, DETAIL_CACHE_TTL);
+      Cache.set(cacheKey, dbCached.data, secondsUntilNextSaturday1am() * 1000);
       return dbCached;
     }
 
@@ -135,8 +133,8 @@ export abstract class PanierService {
     const detail: PanierDetail = { id, ...parseDetailHtml(html, id) };
     const lastUpdated = new Date().toISOString();
 
-    Cache.set(cacheKey, detail, DETAIL_CACHE_TTL);
-    await CacheRepository.set(cacheKey, detail, DETAIL_CACHE_TTL);
+    Cache.set(cacheKey, detail, secondsUntilNextSaturday1am() * 1000);
+    await CacheRepository.set(cacheKey, detail, secondsUntilNextSaturday1am() * 1000);
 
     return { data: detail, lastUpdated };
   }
