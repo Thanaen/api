@@ -30,12 +30,42 @@ jobs:
     env:
       DATABASE_URL: postgres://neon:npg@localhost:5432/neondb
       NEON_LOCAL_FETCH_ENDPOINT: http://localhost:5432/sql
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install
+
+      - name: Clean up stale Neon CI branches
+        run: |
+          branches=$(curl -sf \
+            -H "Authorization: Bearer $NEON_API_KEY" \
+            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches" \
+            | jq -r '.branches[] | select(.name | startswith("neonlocal-")) | .id')
+          for id in $branches; do
+            echo "Deleting branch $id"
+            curl -sf -X DELETE \
+              -H "Authorization: Bearer $NEON_API_KEY" \
+              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" || true
+          done
+
       - run: bun run db:migrate
       - run: bun run test:db
+
+      - name: Clean up Neon branch
+        if: always()
+        run: |
+          branches=$(curl -sf \
+            -H "Authorization: Bearer $NEON_API_KEY" \
+            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches" \
+            | jq -r '.branches[] | select(.name | startswith("neonlocal-")) | .id')
+          for id in $branches; do
+            echo "Deleting branch $id"
+            curl -sf -X DELETE \
+              -H "Authorization: Bearer $NEON_API_KEY" \
+              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" || true
+          done
 
   migrate:
     if: github.event_name == 'push'

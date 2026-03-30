@@ -5,6 +5,9 @@ on:
     - cron: "0 8 * * 1" # Monday 8am UTC
   workflow_dispatch:
 
+permissions:
+  issues: write
+
 jobs:
   scraper-health:
     runs-on: ubuntu-latest
