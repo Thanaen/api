@@ -21,6 +21,19 @@ test("hello world", () => {
 
 For more information, read the Bun API docs at https://bun.com/docs.
 
+## Code Intelligence
+
+Prefer LSP over Grep/Read for code navigation — it's faster, precise, and avoids reading entire files:
+
+- `workspaceSymbol` to find where something is defined
+- `findReferences` to see all usages across the codebase
+- `goToDefinition` / `goToImplementation` to jump to source
+- `hover` for type info without reading the file
+
+Use Grep only when LSP isn't available or for text/pattern searches (comments, strings, config).
+
+After writing or editing code, check LSP diagnostics and fix errors before proceeding.
+
 ## Public API
 
 This is a public API consumed by external clients. When adding or modifying endpoints:
