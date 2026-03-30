@@ -19,6 +19,14 @@ jobs:
 
   test-db:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: neondatabase/neon_local:latest
+        ports:
+          - 5432:5432
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
     env:
       DATABASE_URL: postgres://neon:npg@localhost:5432/neondb
       NEON_LOCAL_FETCH_ENDPOINT: http://localhost:5432/sql
@@ -41,28 +49,6 @@ jobs:
               -H "Authorization: Bearer $NEON_API_KEY" \
               "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" || true
           done
-
-      - name: Start neon_local
-        run: |
-          docker run -d --name neondb \
-            -p 5432:5432 \
-            -e NEON_API_KEY=$NEON_API_KEY \
-            -e NEON_PROJECT_ID=$NEON_PROJECT_ID \
-            neondatabase/neon_local:latest
-
-      - name: Wait for neon_local to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:5432/sql > /dev/null 2>&1; then
-              echo "neon_local is ready"
-              exit 0
-            fi
-            echo "Waiting for neon_local... ($i/30)"
-            sleep 2
-          done
-          echo "neon_local failed to start"
-          docker logs neondb
-          exit 1
 
       - run: bun run db:migrate
       - run: bun run test:db
