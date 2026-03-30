@@ -27,6 +27,12 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        options: >-
+          --health-cmd "curl -sf http://localhost:5432/sql || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 10s
     env:
       DATABASE_URL: postgres://neon:npg@localhost:5432/neondb
       NEON_LOCAL_FETCH_ENDPOINT: http://localhost:5432/sql
