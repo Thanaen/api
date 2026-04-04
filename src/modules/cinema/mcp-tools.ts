@@ -6,7 +6,7 @@ import { CinemaService } from "./service";
 export function registerCinemaTools(server: McpServer) {
   server.tool(
     "list_cinema_movies",
-    "List all movies currently showing at Mon Ciné Anglet cinema, with full details including title, genres, synopsis, casting, direction, production, poster, release date, and runtime. Includes a lastUpdated timestamp.",
+    "List all movies currently showing at Mon Ciné Anglet cinema, with full details including title, genres, synopsis, casting, direction, production, poster, release date, runtime, and a direct URL to the movie page. Includes a lastUpdated timestamp.",
     async () => {
       try {
         const movies = await CinemaService.list();
@@ -22,7 +22,7 @@ export function registerCinemaTools(server: McpServer) {
 
   server.tool(
     "get_cinema_movie_detail",
-    "Get full details for a movie by ID, including synopsis, casting, direction, and production studio. Includes a lastUpdated timestamp.",
+    "Get full details for a movie by ID, including synopsis, casting, direction, production studio, and a direct URL to the movie page. Includes a lastUpdated timestamp.",
     { id: z.string().describe("The movie ID") },
     async ({ id }) => {
       try {

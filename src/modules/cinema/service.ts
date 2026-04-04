@@ -80,10 +80,20 @@ export async function fetchMovies(ids: string[]): Promise<UpstreamMovie[]> {
   return fetchJson<UpstreamMovie[]>(url);
 }
 
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export function mapToMovie(movie: UpstreamMovie): Movie {
+  const title = movie.title ?? "";
   return {
     id: movie.id,
-    title: movie.title,
+    title,
     genres: movie.genres ?? "",
     production: movie.studio?.name ?? "",
     casting: movie.casting ?? [],
@@ -92,6 +102,7 @@ export function mapToMovie(movie: UpstreamMovie): Movie {
     releaseDate: movie.release ?? "",
     runtime: movie.runtime ?? 0,
     synopsis: movie.locale?.synopsis ?? "",
+    url: `${BASE_URL}/movies/${movie.id}-${slugify(title)}/`,
   };
 }
 
