@@ -8,6 +8,13 @@
       "when": 1774783669992,
       "tag": "0000_broken_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775294489042,
+      "tag": "0001_panoramic_midnight",
+      "breakpoints": true
     }
   ]
 }
