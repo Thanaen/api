@@ -54,6 +54,10 @@ describe("mapToMovieSummary", () => {
   test("maps runtime", () => {
     expect(summary.runtime).toBe(5940);
   });
+
+  test("maps synopsis from locale", () => {
+    expect(summary.synopsis).toBe("Pour sauver son emploi, David accepte un plan foireux.");
+  });
 });
 
 describe("mapToMovieDetail", () => {

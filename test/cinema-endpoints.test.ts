@@ -18,6 +18,7 @@ const mockSummary = {
   poster: "https://all.web.img.acsta.net/img/example.jpg",
   releaseDate: "2026-02-04T00:00:00.000Z",
   runtime: 5940,
+  synopsis: "Pour sauver son emploi...",
 };
 
 const mockDetail = {

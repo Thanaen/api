@@ -18,6 +18,11 @@ export const MovieSummary = t.Object(
       example: "2026-02-04T00:00:00.000Z",
     }),
     runtime: t.Number({ description: "Runtime in seconds", example: 5940 }),
+    synopsis: t.String({
+      description: "Movie synopsis in French",
+      example:
+        "Pour sauver son emploi, David accepte un plan foireux : ramener un mystérieux colis d'Amérique du Sud...",
+    }),
   },
   { description: "Summary of a movie currently showing" },
 );

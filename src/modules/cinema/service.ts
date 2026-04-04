@@ -103,6 +103,7 @@ export function mapToMovieSummary(movie: UpstreamMovie): MovieSummary {
     poster: movie.poster ?? "",
     releaseDate: movie.release ?? "",
     runtime: movie.runtime ?? 0,
+    synopsis: movie.locale?.synopsis ?? "",
   };
 }
 
