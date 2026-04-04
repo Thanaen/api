@@ -61,7 +61,7 @@ export const cinema = new Elysia({ name: "cinema", prefix: "/moncine/movies" })
         id: t.String({ description: "Unique movie ID", example: "317669" }),
       }),
       response: {
-        200: "cinema.movie.detail",
+        200: "cinema.movie",
         404: errorResponse,
         502: errorResponse,
       },

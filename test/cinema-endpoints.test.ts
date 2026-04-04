@@ -11,27 +11,22 @@ afterEach(() => {
   Cache.clear();
 });
 
-const mockSummary = {
+const mockMovie = {
   id: "317669",
   title: "Marsupilami",
   genres: "Comédie, Aventure, Famille",
+  production: "Pathé Films",
+  casting: ["Philippe Lacheau", "Jamel Debbouze"],
+  direction: ["Philippe Lacheau"],
   poster: "https://all.web.img.acsta.net/img/example.jpg",
   releaseDate: "2026-02-04T00:00:00.000Z",
   runtime: 5940,
   synopsis: "Pour sauver son emploi...",
 };
 
-const mockDetail = {
-  ...mockSummary,
-  production: "Pathé Films",
-  casting: ["Philippe Lacheau", "Jamel Debbouze"],
-  direction: ["Philippe Lacheau"],
-  synopsis: "Pour sauver son emploi...",
-};
-
 describe("GET /moncine/movies", () => {
   test("returns 200 with array of movies from cache", async () => {
-    Cache.set("cinema:list", [mockSummary], 60_000);
+    Cache.set("cinema:list", [mockMovie], 60_000);
     const res = await handle("/");
     expect(res.status).toBe(200);
 
@@ -63,7 +58,7 @@ describe("GET /moncine/movies", () => {
 
 describe("GET /moncine/movies/:id", () => {
   test("returns 200 with movie detail from cache", async () => {
-    Cache.set("cinema:detail:317669", mockDetail, 60_000);
+    Cache.set("cinema:detail:317669", mockMovie, 60_000);
     const res = await handle("/317669");
     expect(res.status).toBe(200);
 
@@ -102,7 +97,7 @@ describe("GET /moncine/movies/:id", () => {
 
 describe("cache-control headers", () => {
   test("200 response sets a public cache-control header", async () => {
-    Cache.set("cinema:list", [mockSummary], 60_000);
+    Cache.set("cinema:list", [mockMovie], 60_000);
     const res = await handle("/");
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toMatch(

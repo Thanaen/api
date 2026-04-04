@@ -1,6 +1,6 @@
 import { CacheRepository } from "../../db/cache-repository";
 import { Cache, secondsUntilNextWednesday4am } from "./cache";
-import type { MovieDetail, MovieSummary, TimestampedResult } from "./model";
+import type { Movie, TimestampedResult } from "./model";
 
 const BASE_URL = "https://www.moncine-anglet.com";
 const THEATER = { id: "P9022", timeZone: "Europe/Paris" };
@@ -80,7 +80,7 @@ export async function fetchMovies(ids: string[]): Promise<UpstreamMovie[]> {
   return fetchJson<UpstreamMovie[]>(url);
 }
 
-export function mapToMovieDetail(movie: UpstreamMovie): MovieDetail {
+export function mapToMovie(movie: UpstreamMovie): Movie {
   return {
     id: movie.id,
     title: movie.title,
@@ -95,24 +95,12 @@ export function mapToMovieDetail(movie: UpstreamMovie): MovieDetail {
   };
 }
 
-export function mapToMovieSummary(movie: UpstreamMovie): MovieSummary {
-  return {
-    id: movie.id,
-    title: movie.title,
-    genres: movie.genres ?? "",
-    poster: movie.poster ?? "",
-    releaseDate: movie.release ?? "",
-    runtime: movie.runtime ?? 0,
-    synopsis: movie.locale?.synopsis ?? "",
-  };
-}
-
 export abstract class CinemaService {
-  static async list(): Promise<TimestampedResult<MovieSummary[]>> {
-    const cached = Cache.getWithMeta<MovieSummary[]>(LISTING_CACHE_KEY);
+  static async list(): Promise<TimestampedResult<Movie[]>> {
+    const cached = Cache.getWithMeta<Movie[]>(LISTING_CACHE_KEY);
     if (cached) return cached;
 
-    const dbCached = await CacheRepository.getWithMeta<MovieSummary[]>(LISTING_CACHE_KEY);
+    const dbCached = await CacheRepository.getWithMeta<Movie[]>(LISTING_CACHE_KEY);
     if (dbCached) {
       Cache.set(LISTING_CACHE_KEY, dbCached.data, secondsUntilNextWednesday4am() * 1000);
       return dbCached;
@@ -120,7 +108,7 @@ export abstract class CinemaService {
 
     const ids = await fetchScheduleMovieIds();
     const upstream = await fetchMovies(ids);
-    const movies = upstream.map(mapToMovieSummary);
+    const movies = upstream.map(mapToMovie);
     const lastUpdated = new Date().toISOString();
 
     Cache.set(LISTING_CACHE_KEY, movies, secondsUntilNextWednesday4am() * 1000);
@@ -129,13 +117,13 @@ export abstract class CinemaService {
     return { data: movies, lastUpdated };
   }
 
-  static async detail(id: string): Promise<TimestampedResult<MovieDetail> | null> {
+  static async detail(id: string): Promise<TimestampedResult<Movie> | null> {
     const cacheKey = `cinema:detail:${id}`;
 
-    const cached = Cache.getWithMeta<MovieDetail>(cacheKey);
+    const cached = Cache.getWithMeta<Movie>(cacheKey);
     if (cached) return cached;
 
-    const dbCached = await CacheRepository.getWithMeta<MovieDetail>(cacheKey);
+    const dbCached = await CacheRepository.getWithMeta<Movie>(cacheKey);
     if (dbCached) {
       Cache.set(cacheKey, dbCached.data, secondsUntilNextWednesday4am() * 1000);
       return dbCached;
@@ -144,7 +132,7 @@ export abstract class CinemaService {
     const upstream = await fetchMovies([id]);
     if (upstream.length === 0) return null;
 
-    const detail = mapToMovieDetail(upstream[0]);
+    const detail = mapToMovie(upstream[0]);
     const lastUpdated = new Date().toISOString();
 
     Cache.set(cacheKey, detail, secondsUntilNextWednesday4am() * 1000);
