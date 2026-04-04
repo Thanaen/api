@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { Elysia } from "elysia";
 
+import { registerCinemaTools } from "../cinema/mcp-tools";
 import { registerPanierTools } from "../paniers/mcp-tools";
 
 function createMcpServer(): McpServer {
@@ -11,6 +12,7 @@ function createMcpServer(): McpServer {
   });
 
   registerPanierTools(server);
+  registerCinemaTools(server);
 
   return server;
 }

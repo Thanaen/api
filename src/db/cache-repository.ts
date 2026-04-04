@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
-import { panierCache } from "./schema";
+import { cache } from "./schema";
 
 const MAX_ENTRIES_PER_KEY = 4;
 
@@ -13,10 +13,10 @@ export abstract class CacheRepository {
 
   static async getWithMeta<T>(key: string): Promise<{ data: T; lastUpdated: string } | null> {
     const [row] = await getDb()
-      .select({ data: panierCache.data, createdAt: panierCache.createdAt })
-      .from(panierCache)
-      .where(and(eq(panierCache.key, key), gt(panierCache.expiresAt, sql`now()`)))
-      .orderBy(desc(panierCache.createdAt))
+      .select({ data: cache.data, createdAt: cache.createdAt })
+      .from(cache)
+      .where(and(eq(cache.key, key), gt(cache.expiresAt, sql`now()`)))
+      .orderBy(desc(cache.createdAt))
       .limit(1);
 
     if (!row) return null;
@@ -29,15 +29,15 @@ export abstract class CacheRepository {
     const jsonData = JSON.stringify(data);
 
     await db.execute(sql`
-      INSERT INTO panier_cache (key, data, expires_at)
+      INSERT INTO cache (key, data, expires_at)
       VALUES (${key}, ${jsonData}::jsonb, ${expiresAt})
     `);
 
     await db.execute(sql`
-      DELETE FROM panier_cache
+      DELETE FROM cache
       WHERE key = ${key}
         AND id NOT IN (
-          SELECT id FROM panier_cache
+          SELECT id FROM cache
           WHERE key = ${key}
           ORDER BY created_at DESC
           LIMIT ${MAX_ENTRIES_PER_KEY}
@@ -46,6 +46,6 @@ export abstract class CacheRepository {
   }
 
   static async clear(): Promise<void> {
-    await getDb().delete(panierCache);
+    await getDb().delete(cache);
   }
 }

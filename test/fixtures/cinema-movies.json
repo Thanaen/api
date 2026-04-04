@@ -1,0 +1,57 @@
+[
+  {
+    "id": "317669",
+    "title": "Marsupilami",
+    "runtime": 5940,
+    "genres": "Comédie, Aventure, Famille",
+    "poster": "https://all.web.img.acsta.net/img/b2/cb/b2cb998b62863d43cdd9a5f49c5ea4e6.jpg",
+    "__typename": "Movie",
+    "altId": ["370472", "411540"],
+    "locale": {
+      "title": "Marsupilami",
+      "synopsis": "Pour sauver son emploi, David accepte un plan foireux.",
+      "__typename": "MovieLocalized",
+      "poster": {
+        "url": "https://all.web.img.acsta.net/img/b2/cb/b2cb998b62863d43cdd9a5f49c5ea4e6.jpg"
+      }
+    },
+    "casting": ["Philippe Lacheau", "Jamel Debbouze", "Élodie Fontan"],
+    "direction": ["Philippe Lacheau"],
+    "release": "2026-02-04T00:00:00.000Z",
+    "studio": { "name": "Pathé Films" }
+  },
+  {
+    "id": "1000016304",
+    "title": "Compostelle",
+    "runtime": 6840,
+    "genres": "Comédie, Drame",
+    "poster": "https://all.web.img.acsta.net/img/5b/3d/5b3d2c4e0f58bab97b979611615ea321.jpg",
+    "__typename": "Movie",
+    "locale": {
+      "title": "Compostelle",
+      "synopsis": "Fred et Adam ne se connaissent pas.",
+      "__typename": "MovieLocalized"
+    },
+    "casting": ["Alexandra Lamy", "Julien Le Berre", "Mélanie Doutey"],
+    "direction": ["Yann Samuell"],
+    "release": "2026-04-01T00:00:00.000Z",
+    "studio": { "name": "Apollo Films" }
+  },
+  {
+    "id": "327878",
+    "title": "Super Mario Galaxy Le Film",
+    "runtime": 5940,
+    "genres": "Animation, Aventure, Famille, Action, Fantastique",
+    "poster": "https://all.web.img.acsta.net/img/92/3c/923c580e3fb2488d308865d6b6a2e381.jpg",
+    "__typename": "Movie",
+    "locale": {
+      "title": "Super Mario Galaxy Le Film",
+      "synopsis": "Après SUPER MARIO BROS., l'adaptation cinématographique du célèbre jeu vidéo.",
+      "__typename": "MovieLocalized"
+    },
+    "casting": ["Chris Pratt", "Anya Taylor-Joy", "Charlie Day"],
+    "direction": ["Aaron Horvath", "Michael Jelenic"],
+    "release": "2026-04-01T00:00:00.000Z",
+    "studio": { "name": "Universal Pictures International France" }
+  }
+]

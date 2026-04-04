@@ -1,6 +1,7 @@
 import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 
+import { cinema } from "./modules/cinema";
 import { mcp } from "./modules/mcp";
 import { paniers } from "./modules/paniers";
 
@@ -24,6 +25,11 @@ const app = new Elysia()
             description:
               "Seasonal baskets from panierdeladour.com — list available baskets or get full details including composition and product origins.",
           },
+          {
+            name: "Mon Ciné Anglet",
+            description:
+              "Movies currently showing at Mon Ciné Anglet — list the current programme or get full details including synopsis, casting, and production.",
+          },
         ],
         externalDocs: {
           description: "Source code",
@@ -33,6 +39,7 @@ const app = new Elysia()
     }),
   )
   .use(paniers)
+  .use(cinema)
   .use(mcp)
   .get("/", ({ redirect }) => redirect("https://thanaen.dev"), {
     detail: { hide: true },

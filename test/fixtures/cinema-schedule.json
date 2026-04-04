@@ -1,0 +1,48 @@
+{
+  "P9022": {
+    "schedule": {
+      "317669": {
+        "2026-04-04": [
+          {
+            "id": "s1",
+            "startsAt": "2026-04-04T14:00:00",
+            "tags": ["VF", "DIGITAL"],
+            "isExpired": false,
+            "data": {
+              "ticketing": ["https://moncine-anglet.cotecine.fr/reserver/123"],
+              "occupancy": { "rate": 0.45 }
+            }
+          }
+        ]
+      },
+      "1000016304": {
+        "2026-04-04": [
+          {
+            "id": "s2",
+            "startsAt": "2026-04-04T17:15:00",
+            "tags": ["VF", "DIGITAL"],
+            "isExpired": false,
+            "data": {
+              "ticketing": ["https://moncine-anglet.cotecine.fr/reserver/456"],
+              "occupancy": { "rate": 0.3 }
+            }
+          }
+        ]
+      },
+      "327878": {
+        "2026-04-05": [
+          {
+            "id": "s3",
+            "startsAt": "2026-04-05T20:30:00",
+            "tags": ["VF", "DIGITAL", "3D"],
+            "isExpired": false,
+            "data": {
+              "ticketing": ["https://moncine-anglet.cotecine.fr/reserver/789"],
+              "occupancy": { "rate": 0.7 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
