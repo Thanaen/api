@@ -22,6 +22,7 @@ const mockMovie = {
   releaseDate: "2026-02-04T00:00:00.000Z",
   runtime: 5940,
   synopsis: "Pour sauver son emploi...",
+  url: "https://www.moncine-anglet.com/movies/317669-marsupilami/",
 };
 
 describe("GET /moncine/movies", () => {

@@ -35,6 +35,10 @@ export const Movie = t.Object(
       example:
         "Pour sauver son emploi, David accepte un plan foireux : ramener un mystérieux colis d'Amérique du Sud...",
     }),
+    url: t.String({
+      description: "Direct link to the movie page on Mon Ciné Anglet",
+      example: "https://www.moncine-anglet.com/movies/317669-marsupilami/",
+    }),
   },
   { description: "A movie currently showing at the cinema" },
 );
