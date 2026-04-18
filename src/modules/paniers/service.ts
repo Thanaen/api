@@ -1,7 +1,7 @@
 import { parse } from "node-html-parser";
 
 import { CacheRepository } from "../../db/cache-repository";
-import { track } from "../../telemetry";
+import { trackedFetch } from "../../telemetry";
 import { Cache, secondsUntilNextSaturday1am } from "./cache";
 import type { CompositionItem, PanierDetail, PanierSummary, TimestampedResult } from "./model";
 
@@ -17,32 +17,8 @@ export function parsePrice(text: string): number {
 }
 
 async function fetchPage(url: string): Promise<string> {
-  const startedAt = Date.now();
-  try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT),
-    });
-    track("upstream_fetch", {
-      source: SOURCE,
-      url,
-      status_code: response.status,
-      ok: response.ok,
-      duration_ms: Date.now() - startedAt,
-    });
-    if (!response.ok) {
-      throw new Error(`Upstream responded with ${response.status}`);
-    }
-    return await response.text();
-  } catch (error) {
-    track("upstream_fetch", {
-      source: SOURCE,
-      url,
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-      duration_ms: Date.now() - startedAt,
-    });
-    throw error;
-  }
+  const response = await trackedFetch(SOURCE, url, FETCH_TIMEOUT);
+  return await response.text();
 }
 
 export function parseListingHtml(html: string): PanierSummary[] {
