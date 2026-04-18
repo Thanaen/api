@@ -43,32 +43,19 @@ jobs:
     concurrency:
       group: neon-ci-tests-branch
       cancel-in-progress: false
-    services:
-      db:
-        image: neondatabase/neon_local:latest
-        ports:
-          - 5432:5432
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-          # Reuse a single long-lived CI branch instead of creating an
-          # ephemeral branch per run. Keeps the project's Neon branch
-          # count constant regardless of CI volume.
-          BRANCH_ID: ${{ secrets.NEON_CI_BRANCH_ID }}
-          DELETE_BRANCH: "false"
     env:
-      DATABASE_URL: postgres://neon:npg@localhost:5432/neondb
-      NEON_LOCAL_FETCH_ENDPOINT: http://localhost:5432/sql
+      # Direct connection string to the long-lived ci-tests Neon branch.
+      # Reusing one branch across all CI runs keeps the project's Neon
+      # branch count constant regardless of CI volume.
+      DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install
 
       - name: Reset schema on shared ci-tests branch
-        env:
-          PGPASSWORD: npg
         run: |
-          psql -h localhost -U neon -d neondb -v ON_ERROR_STOP=1 <<'SQL'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           DROP SCHEMA IF EXISTS public CASCADE;
           CREATE SCHEMA public;
           SQL
