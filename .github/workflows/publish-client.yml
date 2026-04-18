@@ -19,7 +19,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm (Trusted Publishing requires >= 11.5.1)
+        run: npm install -g npm@latest
 
       - run: bun install --frozen-lockfile
 
@@ -42,8 +44,6 @@ jobs:
         working-directory: packages/api-client
         run: bun test
 
-      - name: Publish to npm
+      - name: Publish to npm (via Trusted Publishing / OIDC)
         working-directory: packages/api-client
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
