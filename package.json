@@ -36,6 +36,7 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@posthog/cli": "^0.7.4",
     "bun-types": "latest",
     "drizzle-kit": "^0.31.10",
     "lefthook": "^2.1.4",
