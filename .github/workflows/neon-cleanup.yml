@@ -1,0 +1,74 @@
+name: Neon stale branch cleanup
+
+# Safety net against Neon branch bloat. Deletes non-primary, non-protected
+# branches older than STALE_HOURS hours. Catches:
+#   - Vercel preview branches that outlived their deployment
+#   - Orphaned CI branches from cancelled runs (pre-shared-branch era or edge cases)
+# The long-lived ci-tests branch (NEON_CI_BRANCH_ID) is always preserved.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # daily at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      stale_hours:
+        description: "Delete branches older than this many hours"
+        required: false
+        default: "24"
+      dry_run:
+        description: "If true, only log what would be deleted"
+        required: false
+        default: "false"
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+      NEON_CI_BRANCH_ID: ${{ secrets.NEON_CI_BRANCH_ID }}
+      STALE_HOURS: ${{ github.event.inputs.stale_hours || '24' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+    steps:
+      - name: Delete stale branches
+        run: |
+          set -euo pipefail
+
+          cutoff_epoch=$(( $(date -u +%s) - STALE_HOURS * 3600 ))
+          echo "Cutoff: branches created before $(date -u -d @$cutoff_epoch --iso-8601=seconds) will be deleted"
+          echo "Preserving primary branch and ci-tests branch ($NEON_CI_BRANCH_ID)"
+
+          branches_json=$(curl -sSf \
+            -H "Authorization: Bearer $NEON_API_KEY" \
+            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches")
+
+          # Build list of {id, name, created_at, primary}
+          # Delete where: not primary, not NEON_CI_BRANCH_ID, created_at < cutoff
+          to_delete=$(echo "$branches_json" | jq -r --arg ci "$NEON_CI_BRANCH_ID" --argjson cutoff "$cutoff_epoch" '
+            .branches[]
+            | select((.primary // false) | not)
+            | select(.id != $ci)
+            | select((.created_at | fromdateiso8601) < $cutoff)
+            | "\(.id)\t\(.name)\t\(.created_at)"
+          ')
+
+          if [ -z "$to_delete" ]; then
+            echo "No stale branches to delete."
+            exit 0
+          fi
+
+          echo "Stale branches:"
+          echo "$to_delete"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run — skipping delete."
+            exit 0
+          fi
+
+          echo "$to_delete" | while IFS=$'\t' read -r id name created; do
+            echo "Deleting $id ($name, created $created)"
+            curl -sSf -X DELETE \
+              -H "Authorization: Bearer $NEON_API_KEY" \
+              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" \
+              > /dev/null || echo "Failed to delete $id (may already be gone)"
+          done

@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 
-import { getDb } from "./index";
+import { getDb, isDatabaseConfigured } from "./index";
 import { cache } from "./schema";
 
 const MAX_ENTRIES_PER_KEY = 4;
@@ -12,6 +12,8 @@ export abstract class CacheRepository {
   }
 
   static async getWithMeta<T>(key: string): Promise<{ data: T; lastUpdated: string } | null> {
+    if (!isDatabaseConfigured()) return null;
+
     const [row] = await getDb()
       .select({ data: cache.data, createdAt: cache.createdAt })
       .from(cache)
@@ -24,6 +26,8 @@ export abstract class CacheRepository {
   }
 
   static async set<T>(key: string, data: T, ttlMs: number): Promise<void> {
+    if (!isDatabaseConfigured()) return;
+
     const db = getDb();
     const expiresAt = new Date(Date.now() + ttlMs);
     const jsonData = JSON.stringify(data);
@@ -46,6 +50,8 @@ export abstract class CacheRepository {
   }
 
   static async clear(): Promise<void> {
+    if (!isDatabaseConfigured()) return;
+
     await getDb().delete(cache);
   }
 }

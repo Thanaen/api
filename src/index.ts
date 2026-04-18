@@ -4,8 +4,43 @@ import { Elysia } from "elysia";
 import { cinema } from "./modules/cinema";
 import { mcp } from "./modules/mcp";
 import { paniers } from "./modules/paniers";
+import { clientIp, hashIp, track, trackException } from "./telemetry";
 
 const app = new Elysia()
+  .derive(() => ({ requestStartedAt: Date.now() }))
+  .onAfterResponse(async ({ request, set, route, requestStartedAt }) => {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const ip = clientIp(request);
+    const statusCode = typeof set.status === "number" ? set.status : 200;
+
+    track(
+      "api_request",
+      {
+        route: route || pathname,
+        path: pathname,
+        method: request.method,
+        status_code: statusCode,
+        duration_ms: Date.now() - requestStartedAt,
+        source: pathname.startsWith("/mcp") ? "mcp" : "rest",
+        $useragent: request.headers.get("user-agent") ?? "",
+      },
+      hashIp(ip),
+    );
+  })
+  .onError(({ error, code, request, route }) => {
+    // Elysia handles validation / not-found / parse errors as expected control flow,
+    // so only ship genuine failures to error tracking.
+    if (code === "VALIDATION" || code === "NOT_FOUND" || code === "PARSE") return;
+
+    const ip = clientIp(request);
+    const url = new URL(request.url);
+    trackException(error, hashIp(ip), {
+      route: route || url.pathname,
+      method: request.method,
+      error_code: code,
+    });
+  })
   .use(
     openapi({
       documentation: {

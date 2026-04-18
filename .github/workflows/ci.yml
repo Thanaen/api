@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -34,53 +38,30 @@ jobs:
 
   test-db:
     runs-on: ubuntu-latest
-    services:
-      db:
-        image: neondatabase/neon_local:latest
-        ports:
-          - 5432:5432
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+    # Serialize access to the shared long-lived ci-tests Neon branch so
+    # concurrent PRs don't stomp each other's schema / data.
+    concurrency:
+      group: neon-ci-tests-branch
+      cancel-in-progress: false
     env:
-      DATABASE_URL: postgres://neon:npg@localhost:5432/neondb
-      NEON_LOCAL_FETCH_ENDPOINT: http://localhost:5432/sql
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+      # Direct pooled connection string to the long-lived ci-tests Neon
+      # branch. Reusing one branch across all CI runs keeps the project's
+      # Neon branch count constant regardless of CI volume.
+      DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install
 
-      - name: Clean up stale Neon CI branches
+      - name: Reset schema on shared ci-tests branch
         run: |
-          branches=$(curl -sf \
-            -H "Authorization: Bearer $NEON_API_KEY" \
-            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches" \
-            | jq -r '.branches[] | select(.name | startswith("neonlocal-")) | .id')
-          for id in $branches; do
-            echo "Deleting branch $id"
-            curl -sf -X DELETE \
-              -H "Authorization: Bearer $NEON_API_KEY" \
-              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" || true
-          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DROP SCHEMA IF EXISTS public CASCADE;
+          CREATE SCHEMA public;
+          SQL
 
       - run: bun run db:migrate
       - run: bun run test:db
-
-      - name: Clean up Neon branch
-        if: always()
-        run: |
-          branches=$(curl -sf \
-            -H "Authorization: Bearer $NEON_API_KEY" \
-            "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches" \
-            | jq -r '.branches[] | select(.name | startswith("neonlocal-")) | .id')
-          for id in $branches; do
-            echo "Deleting branch $id"
-            curl -sf -X DELETE \
-              -H "Authorization: Bearer $NEON_API_KEY" \
-              "https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches/$id" || true
-          done
 
   migrate:
     if: github.event_name == 'push'
