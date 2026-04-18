@@ -17,6 +17,21 @@ jobs:
       - run: bun run fmt:check
       - run: bun run test:unit
 
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/api-client
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - name: Install (workspace root)
+        run: bun install
+        working-directory: ${{ github.workspace }}
+      - run: bun run build
+      - run: bun run test
+      - run: bun run typecheck
+
   test-db:
     runs-on: ubuntu-latest
     services:

@@ -1,0 +1,49 @@
+name: Publish @thanaen/api-client
+
+on:
+  push:
+    tags:
+      - "client-v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: bun install --frozen-lockfile
+
+      - name: Verify tag matches package.json version
+        working-directory: packages/api-client
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#client-v}"
+          PKG_VERSION=$(jq -r .version package.json)
+          echo "tag=$TAG_VERSION pkg=$PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Build
+        working-directory: packages/api-client
+        run: bun run build
+
+      - name: Test
+        working-directory: packages/api-client
+        run: bun test
+
+      - name: Publish to npm
+        working-directory: packages/api-client
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
