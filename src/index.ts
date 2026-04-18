@@ -4,7 +4,7 @@ import { Elysia } from "elysia";
 import { cinema } from "./modules/cinema";
 import { mcp } from "./modules/mcp";
 import { paniers } from "./modules/paniers";
-import { clientIp, hashIp, track, trackException } from "./telemetry";
+import { clientIp, flush, hashIp, track, trackException } from "./telemetry";
 
 const app = new Elysia()
   .derive(() => ({ requestStartedAt: Date.now() }))
@@ -27,6 +27,8 @@ const app = new Elysia()
       },
       hashIp(ip),
     );
+
+    await flush();
   })
   .onError(({ error, code, request, route }) => {
     // Elysia handles validation / not-found / parse errors as expected control flow,
