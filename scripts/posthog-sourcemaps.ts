@@ -15,19 +15,40 @@ if (!uploadEnabled) {
   process.exit(0);
 }
 
-const bunx = process.platform === "win32" ? "bunx.cmd" : "bunx";
+const posthogCli =
+  process.platform === "win32"
+    ? "node_modules\\.bin\\posthog-cli.cmd"
+    : "node_modules/.bin/posthog-cli";
 
-function run(args: string[]): void {
-  const result = Bun.spawnSync(args, {
-    stdio: ["inherit", "inherit", "inherit"],
-  });
+const MAX_ATTEMPTS = 5;
 
-  if (result.exitCode !== 0) {
-    process.exit(result.exitCode);
+async function run(args: string[], label: string): Promise<void> {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const result = Bun.spawnSync([posthogCli, ...args], {
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+
+    if (result.exitCode === 0) {
+      return;
+    }
+
+    console.warn(
+      `PostHog sourcemap ${label} attempt ${attempt}/${MAX_ATTEMPTS} failed (exit code ${result.exitCode})`,
+    );
+
+    if (attempt < MAX_ATTEMPTS) {
+      const delayMs = 2000 * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
   }
+
+  console.error(`PostHog sourcemap ${label} failed after ${MAX_ATTEMPTS} attempts`);
+  process.exit(1);
 }
 
 console.log("Uploading PostHog source maps");
 
-run([bunx, "@posthog/cli@latest", "sourcemap", "inject", "--directory", "dist"]);
-run([bunx, "@posthog/cli@latest", "sourcemap", "upload", "--directory", "dist"]);
+await run(["sourcemap", "inject", "--directory", "dist"], "inject");
+await run(["sourcemap", "upload", "--directory", "dist"], "upload");
+
+export {};
