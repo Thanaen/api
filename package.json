@@ -1,6 +1,9 @@
 {
   "name": "api",
   "version": "1.0.50",
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "module": "src/index.js",
   "scripts": {
@@ -24,9 +27,11 @@
     "@elysiajs/openapi": "^1.4.14",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "@neondatabase/serverless": "^1.0.2",
+    "@sinclair/typebox": ">= 0.34.0 < 1",
     "drizzle-orm": "^0.45.2",
     "elysia": "latest",
-    "node-html-parser": "^7.1.0"
+    "node-html-parser": "^7.1.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "bun-types": "latest",

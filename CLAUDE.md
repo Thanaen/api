@@ -40,6 +40,26 @@ This is a public API consumed by external clients. When adding or modifying endp
 
 - Keep OpenAPI documentation accurate: update `summary`, `description`, `operationId`, and TypeBox schema descriptions/examples for every affected field and route.
 - Keep the MCP server in sync: update tool names, descriptions, and parameters in `src/modules/paniers/mcp-tools.ts` to match any API changes.
+- Keep the `@thanaen/api-client` client in sync (see _Client package_ section).
+
+## Client package
+
+`packages/api-client/` publishes `@thanaen/api-client` on npm. Any change to the public API surface MUST be mirrored in the client in the same PR:
+
+- Add / remove / rename an endpoint → update `packages/api-client/src/client.ts`
+- Change a request or response schema → update the corresponding interface in `packages/api-client/src/types.ts` (these are hand-written plain TS interfaces, kept in shape-parity with `src/modules/*/model.ts`)
+- Change an error shape or status code → update `packages/api-client/src/errors.ts` and the error-handling branch in `client.ts`
+- Add / update a test in `packages/api-client/test/` covering the change
+
+Versioning rules for `packages/api-client/package.json`:
+
+- patch: bug fix in client only
+- minor: new endpoint or non-breaking additive field
+- major: breaking change in a request or response shape
+
+The client is versioned independently from the API, but it carries a `BUILT_FOR_API_VERSION` constant generated at build time from the root `package.json`. When you bump the root API version for a change that affects the client, bump the client version too so `BUILT_FOR_API_VERSION` reflects the API it was tested against.
+
+To release: bump `packages/api-client/package.json`, merge to `master`, then push a tag `client-vX.Y.Z` matching that version. The `publish-client` workflow builds and publishes to npm.
 
 ## Notes
 

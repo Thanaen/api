@@ -1,0 +1,53 @@
+{
+  "name": "@thanaen/api-client",
+  "version": "0.1.0",
+  "description": "JavaScript/TypeScript client for the Thanaen public API (api.thanaen.dev)",
+  "keywords": [
+    "api",
+    "client",
+    "mon-cine-anglet",
+    "paniers-de-l-adour",
+    "thanaen"
+  ],
+  "license": "MIT",
+  "author": "Thanaen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Thanaen/api.git",
+    "directory": "packages/api-client"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "gen:version": "bun scripts/gen-version.ts",
+    "prebuild": "bun run gen:version",
+    "build": "tsdown",
+    "test": "bun run gen:version && bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsdown": "^0.21.7",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

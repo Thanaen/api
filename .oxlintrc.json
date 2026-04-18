@@ -4,5 +4,5 @@
     "typeAware": true,
     "typeCheck": true
   },
-  "ignorePatterns": [".claude/skills/*"]
+  "ignorePatterns": [".claude/skills/*", "packages/*/node_modules/*", "packages/*/dist/*"]
 }
