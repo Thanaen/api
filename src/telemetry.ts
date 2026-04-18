@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { waitUntil } from "@vercel/functions";
+
 import { posthog } from "./posthog";
 
 type Props = Record<string, unknown>;
@@ -50,6 +52,14 @@ export async function flush(): Promise<void> {
   try {
     await posthog.flush();
   } catch {}
+}
+
+export function scheduleFlush(): void {
+  try {
+    waitUntil(flush());
+  } catch {
+    void flush();
+  }
 }
 
 export async function trackedFetch(
@@ -126,5 +136,7 @@ export async function withMcpTelemetry<T>(
       content: [{ type: "text", text: "Failed to fetch upstream data" }],
       isError: true,
     };
+  } finally {
+    scheduleFlush();
   }
 }
