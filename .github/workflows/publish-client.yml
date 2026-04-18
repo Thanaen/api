@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: lts/*
 
       - name: Upgrade npm (Trusted Publishing requires >= 11.5.1)
         run: npm install -g npm@latest
