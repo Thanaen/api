@@ -44,9 +44,9 @@ jobs:
       group: neon-ci-tests-branch
       cancel-in-progress: false
     env:
-      # Direct connection string to the long-lived ci-tests Neon branch.
-      # Reusing one branch across all CI runs keeps the project's Neon
-      # branch count constant regardless of CI volume.
+      # Direct pooled connection string to the long-lived ci-tests Neon
+      # branch. Reusing one branch across all CI runs keeps the project's
+      # Neon branch count constant regardless of CI volume.
       DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v6
