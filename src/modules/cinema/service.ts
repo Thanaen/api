@@ -1,4 +1,5 @@
 import { CacheRepository } from "../../db/cache-repository";
+import { track } from "../../telemetry";
 import { Cache, secondsUntilNextWednesday4am } from "./cache";
 import type { Movie, TimestampedResult } from "./model";
 
@@ -6,6 +7,7 @@ const BASE_URL = "https://www.moncine-anglet.com";
 const THEATER = { id: "P9022", timeZone: "Europe/Paris" };
 const LISTING_CACHE_KEY = "cinema:list";
 const FETCH_TIMEOUT = 10_000;
+const SOURCE = "moncine";
 
 interface UpstreamMovie {
   id: string;
@@ -45,13 +47,32 @@ function currentPlayWeekRange(): { from: string; to: string } {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT),
-  });
-  if (!response.ok) {
-    throw new Error(`Upstream responded with ${response.status}`);
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+    });
+    track("upstream_fetch", {
+      source: SOURCE,
+      url,
+      status_code: response.status,
+      ok: response.ok,
+      duration_ms: Date.now() - startedAt,
+    });
+    if (!response.ok) {
+      throw new Error(`Upstream responded with ${response.status}`);
+    }
+    return (await response.json()) as T;
+  } catch (error) {
+    track("upstream_fetch", {
+      source: SOURCE,
+      url,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      duration_ms: Date.now() - startedAt,
+    });
+    throw error;
   }
-  return response.json() as Promise<T>;
 }
 
 export async function fetchScheduleMovieIds(): Promise<string[]> {

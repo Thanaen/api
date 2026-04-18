@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
   "framework": "elysia",
-  "buildCommand": "bun run db:migrate && bun run build",
+  "buildCommand": "bun run db:migrate && bun run build && bun run posthog:sourcemaps",
   "devCommand": "bun run --watch src/dev.ts",
   "outputDirectory": "dist"
 }
