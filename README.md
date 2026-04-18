@@ -23,10 +23,13 @@ The API uses a two-tier caching strategy to minimize upstream scraping:
 
 ### Environment Variables
 
-| Variable                    | Required | Description                                                             |
-| --------------------------- | -------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL`              | **Yes**  | Neon PostgreSQL connection string.                                      |
-| `NEON_LOCAL_FETCH_ENDPOINT` | No       | Set to `http://localhost:5432/sql` when using neon-local for local dev. |
+| Variable                    | Required | Description                                                                                                         |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`              | **Yes**  | Neon PostgreSQL connection string.                                                                                  |
+| `NEON_LOCAL_FETCH_ENDPOINT` | No       | Set to `http://localhost:5432/sql` when using neon-local for local dev.                                             |
+| `POSTHOG_API_KEY`           | No       | Enables PostHog server-side telemetry and error tracking.                                                           |
+| `POSTHOG_HOST`              | No       | Override the PostHog host when using a region-specific or self-hosted instance.                                     |
+| `POSTHOG_UPLOAD_SOURCEMAPS` | No       | Set to `true` in production only after the build environment has been configured for PostHog CLI sourcemap uploads. |
 
 ### Local Database Setup
 

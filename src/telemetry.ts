@@ -45,13 +45,6 @@ export function trackException(
   } catch {}
 }
 
-export async function flush(): Promise<void> {
-  if (!posthog) return;
-  try {
-    await posthog.flush();
-  } catch {}
-}
-
 export async function trackedFetch(
   source: string,
   url: string,

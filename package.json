@@ -13,7 +13,7 @@
     "test:integration": "bun test test/endpoints.test.ts",
     "dev": "bun run --watch src/dev.ts",
     "build": "tsdown",
-    "posthog:sourcemaps": "if [ \"${VERCEL_ENV:-}\" = \"production\" ]; then bunx @posthog/cli@latest sourcemap inject --directory dist && bunx @posthog/cli@latest sourcemap upload --directory dist; else echo \"Skipping PostHog source map upload (VERCEL_ENV=${VERCEL_ENV:-unset})\"; fi",
+    "posthog:sourcemaps": "bun scripts/posthog-sourcemaps.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
