@@ -59,7 +59,18 @@ Versioning rules for `packages/api-client/package.json`:
 
 The client is versioned independently from the API, but it carries a `BUILT_FOR_API_VERSION` constant generated at build time from the root `package.json`. When you bump the root API version for a change that affects the client, bump the client version too so `BUILT_FOR_API_VERSION` reflects the API it was tested against.
 
-To release: bump `packages/api-client/package.json`, merge to `master`, then push a tag `client-vX.Y.Z` matching that version. The `publish-client` workflow builds and publishes to npm.
+### Release commands
+
+After bumping `packages/api-client/package.json` and merging to `master`:
+
+```sh
+# from master, at the merge commit
+VERSION=$(jq -r .version packages/api-client/package.json)
+git tag "client-v$VERSION"
+git push origin "client-v$VERSION"
+```
+
+The `publish-client` workflow picks up the tag, verifies it matches `package.json`, publishes to npm (Trusted Publishing / OIDC, with provenance), and creates a GitHub Release with auto-generated notes.
 
 ## Notes
 

@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v6
@@ -47,3 +47,9 @@ jobs:
       - name: Publish to npm (via Trusted Publishing / OIDC)
         working-directory: packages/api-client
         run: npm publish --provenance --access public
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "@thanaen/api-client ${{ github.ref_name }}"
+          generate_release_notes: true
