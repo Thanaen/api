@@ -69,6 +69,43 @@ Schema is defined in `src/db/schema.ts`. Migrations live in `drizzle/` and are c
 
 After changing `src/db/schema.ts`, run `db:generate` and commit the resulting migration file.
 
+### CI database testing
+
+CI's `test-db` job runs against a **single long-lived Neon branch** named
+`ci-tests` (reused across every run) instead of creating a fresh branch per
+run. The schema is dropped and re-migrated at the start of each run. This
+keeps the project's Neon branch count constant regardless of PR volume.
+
+Required GitHub Actions secrets:
+
+| Secret              | Purpose                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `NEON_API_KEY`      | API key for the Neon project.                                                               |
+| `NEON_PROJECT_ID`   | Neon project ID.                                                                            |
+| `NEON_CI_BRANCH_ID` | ID of the long-lived `ci-tests` branch (create once, e.g. `neon branches create ci-tests`). |
+| `DATABASE_URL`      | Production connection string, used only by the `migrate` job on pushes to master.           |
+
+The `test-db` job uses a `concurrency: neon-ci-tests-branch` group so only
+one run mutates the shared branch at a time.
+
+### Neon branch hygiene
+
+Two safety nets guard against branch-limit exhaustion:
+
+1. **`.github/workflows/neon-cleanup.yml`** — daily cron that deletes any
+   non-primary, non-`ci-tests` Neon branch older than 24h. Covers orphaned
+   Vercel preview branches and cancelled-CI edge cases. Can be run manually
+   via `workflow_dispatch` with a `dry_run` option.
+2. **Vercel Ignored Build Step** — `scripts/vercel-ignore-build.sh` skips
+   preview builds (and therefore Neon branch creation) for changes that
+   only touch docs, `packages/api-client/**`, `.github/**`, or `scripts/**`.
+   Configure it in Vercel: _Settings → Git → Ignored Build Step → Run my own
+   command_ → `bash scripts/vercel-ignore-build.sh`.
+
+Also verify the Vercel ↔ Neon integration has **"Delete branch when the
+deployment is removed"** enabled so preview branches are pruned when
+Vercel prunes their deployment.
+
 ## Testing
 
 | Command                    | What it covers                         | Requirements   |
