@@ -2,6 +2,10 @@
 
 An ElysiaJS API that scrapes and serves structured data from [panierdeladour.com](https://www.panierdeladour.com), deployed on Vercel.
 
+## Documentation
+
+Project decisions and feature design notes live in [`docs/`](./docs/).
+
 ## Development
 
 ```bash
