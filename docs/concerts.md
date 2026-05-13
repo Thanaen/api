@@ -366,8 +366,9 @@ Protected write tools:
 ### LLM-friendly response shape
 
 Protected REST write endpoints and mutating MCP tools should return structured
-results such as. The response `warnings` array is the persisted `agentWarnings`
-array for the affected row, returned under the shorter response name for readability:
+results such as the following. The response `warnings` array is the persisted
+`agentWarnings` array for the affected row, returned under the shorter response
+name for readability:
 
 ```json
 {
