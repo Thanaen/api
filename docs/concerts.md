@@ -44,6 +44,65 @@ External systems can discover concerts and push them into this API.
    without creating duplicates.
 5. **Use closed enums where possible.** This makes OpenAPI, MCP, and LLM usage more
    predictable.
+6. **Keep public identifiers stable.** Slugs and RSS GUIDs must not change because
+   an agent edits a title.
+
+## Cross-cutting decisions
+
+These decisions bind the database, REST API, MCP tools, client package, and RSS
+feed together.
+
+### Slugs
+
+- `venues.slug` and `concerts.slug` are server-derived from `name` / `title`, with
+  deterministic numeric suffixes for collisions, e.g. `foo`, `foo-2`, `foo-3`.
+- Slugs are immutable once created.
+- `PATCH` does not regenerate a slug when `name` or `title` changes.
+- Importers and MCP clients should not supply slugs in v1. If manual slug editing
+  is ever added, it must be an explicit protected operation.
+
+### Date-time wire format
+
+- Date-time fields are stored as `timestamptz` and returned on the wire as UTC ISO
+  8601 strings.
+- `timezone` is returned as a separate IANA timezone string, defaulting to
+  `Europe/Paris`.
+- Clients, RSS rendering, and MCP consumers should localize display from the UTC
+  instant plus `timezone`; the API should not return pre-formatted local strings.
+
+### Public response envelope
+
+Concert endpoints should follow the existing module convention and return a
+`{ data, lastUpdated }` envelope.
+
+- Collection endpoints: `lastUpdated` is the maximum `updatedAt` among returned
+  rows, or the request time for an empty result set.
+- Detail endpoints: `lastUpdated` is the concert row's `updatedAt`.
+- RSS remains XML and does not use this JSON envelope.
+
+### Public vs private fields
+
+- `interestLevel` is intentionally public. The directory is curated around
+  Thanaen's interest, and exposing `maybe` / `interested` / `must_go` makes the
+  catalogue and RSS more useful.
+- `notes` is private and must not be exposed by public REST endpoints, public MCP
+  tools, or RSS. It may be returned only from protected/admin surfaces.
+
+### Primary source URL
+
+- `concert_sources.sourceUrl` stores per-source/importer URLs.
+- `concerts.sourceUrl` is a curator-controlled primary public source URL used for
+  display, public detail links, and RSS fallback links.
+- Import/upsert operations may set `concerts.sourceUrl` when creating a concert or
+  when it is currently empty, but they must not overwrite an existing primary
+  source URL unless the request explicitly asks to replace it.
+
+### Hard deletion and source rows
+
+Soft delete is the v1 default. If a future hard-delete option is implemented,
+`concert_sources.concertId` should use `on delete restrict`. A hard delete must
+therefore either fail with a clear `409 CONFLICT` while source rows exist or use an
+explicit admin operation that first removes source rows.
 
 ## Proposed database tables
 
@@ -51,52 +110,52 @@ External systems can discover concerts and push them into this API.
 
 Venues are normalized because they are useful for filtering, display, and dedupe.
 
-| Column       | Type                                 | Notes                                 |
-| ------------ | ------------------------------------ | ------------------------------------- |
-| `id`         | `serial primary key`                 | Internal venue ID.                    |
-| `name`       | `text not null`                      | Display name.                         |
-| `slug`       | `text not null unique`               | Stable URL-friendly identifier.       |
-| `address`    | `text`                               | Street address when known.            |
-| `postalCode` | `text`                               | Postal code.                          |
-| `city`       | `text not null`                      | City is required for local discovery. |
-| `country`    | `text not null default 'FR'`         | ISO-like country code.                |
-| `latitude`   | `double precision`                   | Optional.                             |
-| `longitude`  | `double precision`                   | Optional.                             |
-| `websiteUrl` | `text`                               | Optional official venue URL.          |
-| `createdAt`  | `timestamptz not null default now()` | Audit field.                          |
-| `updatedAt`  | `timestamptz not null default now()` | Audit field.                          |
+| Column       | Type                                 | Notes                                              |
+| ------------ | ------------------------------------ | -------------------------------------------------- |
+| `id`         | `serial primary key`                 | Internal venue ID.                                 |
+| `name`       | `text not null`                      | Display name.                                      |
+| `slug`       | `text not null unique`               | Server-derived, immutable URL-friendly identifier. |
+| `address`    | `text`                               | Street address when known.                         |
+| `postalCode` | `text`                               | Postal code.                                       |
+| `city`       | `text not null`                      | City is required for local discovery.              |
+| `country`    | `text not null default 'FR'`         | ISO-like country code.                             |
+| `latitude`   | `double precision`                   | Optional.                                          |
+| `longitude`  | `double precision`                   | Optional.                                          |
+| `websiteUrl` | `text`                               | Optional official venue URL.                       |
+| `createdAt`  | `timestamptz not null default now()` | Audit field.                                       |
+| `updatedAt`  | `timestamptz not null default now()` | Audit field.                                       |
 
 ### `concerts`
 
 | Column           | Type                                   | Notes                                                |
 | ---------------- | -------------------------------------- | ---------------------------------------------------- |
 | `id`             | `serial primary key`                   | Internal concert ID.                                 |
-| `slug`           | `text not null unique`                 | Stable URL-friendly identifier.                      |
+| `slug`           | `text not null unique`                 | Server-derived, immutable URL-friendly identifier.   |
 | `title`          | `text not null`                        | Human-readable event title.                          |
 | `headlineArtist` | `text`                                 | Main artist when obvious.                            |
 | `artists`        | `jsonb not null default '[]'`          | Array of `{ name, role? }`. Keeps v1 simple.         |
 | `description`    | `text`                                 | Public description.                                  |
-| `startsAt`       | `timestamptz not null`                 | Main event start date/time.                          |
-| `endsAt`         | `timestamptz`                          | Optional end date/time.                              |
-| `doorsAt`        | `timestamptz`                          | Optional doors opening date/time.                    |
-| `timezone`       | `text not null default 'Europe/Paris'` | For display and importer clarity.                    |
+| `startsAt`       | `timestamptz not null`                 | Main event start instant. Returned as UTC ISO.       |
+| `endsAt`         | `timestamptz`                          | Optional end instant. Returned as UTC ISO.           |
+| `doorsAt`        | `timestamptz`                          | Optional doors opening instant. Returned as UTC ISO. |
+| `timezone`       | `text not null default 'Europe/Paris'` | IANA timezone for display localization.              |
 | `venueId`        | `integer references venues(id)`        | Optional until venue is known.                       |
 | `status`         | `text not null default 'scheduled'`    | See enum below.                                      |
-| `interestLevel`  | `text not null default 'interested'`   | See enum below.                                      |
+| `interestLevel`  | `text not null default 'interested'`   | Public curated interest level. See enum below.       |
 | `genres`         | `jsonb not null default '[]'`          | Array of strings.                                    |
 | `tags`           | `jsonb not null default '[]'`          | Agent/user-defined labels.                           |
 | `ticketUrl`      | `text`                                 | Ticketing URL.                                       |
-| `sourceUrl`      | `text`                                 | Canonical source page URL.                           |
+| `sourceUrl`      | `text`                                 | Curator-controlled primary public source URL.        |
 | `imageUrl`       | `text`                                 | Poster/cover image URL.                              |
 | `priceMin`       | `numeric(10,2)`                        | Optional structured price.                           |
 | `priceMax`       | `numeric(10,2)`                        | Optional structured price.                           |
 | `priceCurrency`  | `text not null default 'EUR'`          | Currency for structured prices.                      |
 | `priceText`      | `text`                                 | Human-readable fallback, e.g. `12€ / 15€ sur place`. |
-| `notes`          | `text`                                 | Private/editorial notes for Thanaen/agents.          |
+| `notes`          | `text`                                 | Private/editorial notes for protected surfaces only. |
 | `discoveredAt`   | `timestamptz not null default now()`   | First discovery time.                                |
 | `lastSeenAt`     | `timestamptz`                          | Last importer confirmation.                          |
-| `createdAt`      | `timestamptz not null default now()`   | Audit field.                                         |
-| `updatedAt`      | `timestamptz not null default now()`   | Audit field.                                         |
+| `createdAt`      | `timestamptz not null default now()`   | Audit field and RSS `pubDate`.                       |
+| `updatedAt`      | `timestamptz not null default now()`   | Audit field and JSON `lastUpdated` source.           |
 | `deletedAt`      | `timestamptz`                          | Soft-delete marker.                                  |
 
 Suggested indexes:
@@ -112,19 +171,19 @@ Suggested indexes:
 A separate table keeps source/import metadata extensible and supports multiple
 sources pointing to the same curated concert.
 
-| Column        | Type                                       | Notes                                                            |
-| ------------- | ------------------------------------------ | ---------------------------------------------------------------- |
-| `id`          | `serial primary key`                       | Internal source row ID.                                          |
-| `concertId`   | `integer not null references concerts(id)` | Curated concert.                                                 |
-| `sourceName`  | `text not null`                            | Importer/source name, e.g. `facebook`, `venue-site`, `songkick`. |
-| `externalId`  | `text`                                     | Source-specific stable ID when available.                        |
-| `sourceUrl`   | `text`                                     | Source URL used by importer.                                     |
-| `contentHash` | `text`                                     | Hash of normalized relevant source content.                      |
-| `rawPayload`  | `jsonb`                                    | Original source payload or extracted data.                       |
-| `firstSeenAt` | `timestamptz not null default now()`       | First source sighting.                                           |
-| `lastSeenAt`  | `timestamptz not null default now()`       | Last source sighting.                                            |
-| `createdAt`   | `timestamptz not null default now()`       | Audit field.                                                     |
-| `updatedAt`   | `timestamptz not null default now()`       | Audit field.                                                     |
+| Column        | Type                                                          | Notes                                                            |
+| ------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `id`          | `serial primary key`                                          | Internal source row ID.                                          |
+| `concertId`   | `integer not null references concerts(id) on delete restrict` | Curated concert.                                                 |
+| `sourceName`  | `text not null`                                               | Importer/source name, e.g. `facebook`, `venue-site`, `songkick`. |
+| `externalId`  | `text`                                                        | Source-specific stable ID when available.                        |
+| `sourceUrl`   | `text`                                                        | Source URL used by importer.                                     |
+| `contentHash` | `text`                                                        | Hash of normalized relevant source content.                      |
+| `rawPayload`  | `jsonb`                                                       | Original source payload or extracted data.                       |
+| `firstSeenAt` | `timestamptz not null default now()`                          | First source sighting.                                           |
+| `lastSeenAt`  | `timestamptz not null default now()`                          | Last source sighting.                                            |
+| `createdAt`   | `timestamptz not null default now()`                          | Audit field.                                                     |
+| `updatedAt`   | `timestamptz not null default now()`                          | Audit field.                                                     |
 
 Suggested constraints:
 
@@ -159,9 +218,14 @@ return a warning.
   - Defaults to future, non-deleted concerts.
   - Query filters: `from`, `to`, `city`, `venueId`, `status`, `interestLevel`,
     `tag`, `includePast`.
-  - Sort: upcoming first by `startsAt`.
+  - Pagination: `limit` with default `50` and max `100`; `cursor` for stable
+    pagination.
+  - Cursor sort key: upcoming first by `(startsAt, id)`.
+  - Response shape: `{ data, lastUpdated, pagination }`.
 - `GET /concerts/:idOrSlug`
   - Returns one non-deleted concert.
+  - Accepts either numeric ID or immutable slug.
+  - Response shape: `{ data, lastUpdated }`.
 - `GET /concerts/feed.xml` or `GET /concerts.rss`
   - RSS feed for upcoming concerts.
 
@@ -172,14 +236,19 @@ such as `CONCERTS_API_KEY` or `ADMIN_API_KEY`.
 
 - `POST /concerts`
   - Create one concert.
+  - Server derives immutable slug.
 - `POST /concerts/import`
   - Idempotent create/update from source metadata.
   - Best fit for external discovery systems.
+  - Uses source constraints first, then best-effort dedupe.
 - `PATCH /concerts/:idOrSlug`
   - Partial update.
+  - Does not regenerate slug from changed title.
 - `DELETE /concerts/:idOrSlug`
   - Soft-delete by default.
   - Optional future `?hard=true` should remain protected and explicit.
+  - Future hard-delete attempts should respect `on delete restrict` source rows
+    and return `409 CONFLICT` if import history still exists.
 
 ## MCP plan
 
@@ -189,7 +258,7 @@ LLM agent to use safely.
 ### Public/read tools
 
 - `list_concerts`
-  - Filters mirror `GET /concerts`.
+  - Filters and pagination mirror `GET /concerts`.
 - `get_concert_detail`
   - Input: `idOrSlug`.
 
@@ -244,20 +313,20 @@ RSS should target human consumption and simple automation.
 Recommended fields:
 
 - Item title: `title` plus city/date context.
-- Item link: public concert detail URL when available; fallback to `sourceUrl`.
-- Item GUID: API concert ID or slug.
-- Item pubDate: `createdAt` or `discoveredAt`.
-- Item description: date, venue, price, artists, tags, and source link.
+- Item link: public concert detail URL when available; fallback to
+  `concerts.sourceUrl`.
+- Item GUID: stable API concert numeric ID, not slug.
+- Item pubDate: `createdAt`, so feed readers see newly inserted rows as new even
+  if `discoveredAt` was back-dated by an importer.
+- Item description: date, venue, price, artists, public interest level, tags, and
+  source link.
 
-Open question: should the default feed order by event date or discovery date?
-Event date is better for planning; discovery date is better for feed readers.
-A possible compromise is `/concerts/feed.xml` by discovery date and public API
-list by event date.
+Default feed order should be discovery/insert order (`createdAt desc`) because
+feed readers are optimized around newly published items. Public API list endpoints
+should sort by event date for planning.
 
 ## Open questions
 
 - Exact API key environment variable name: `CONCERTS_API_KEY` vs `ADMIN_API_KEY`.
-- Whether public detail URLs should use numeric IDs, slugs, or both.
 - Whether venue creation should be separate or embedded in concert create/upsert.
-- Whether `notes` should ever be exposed publicly. Default: no.
 - Which nearby geography is considered “in the area” for default filtering.
