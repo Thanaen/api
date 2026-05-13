@@ -212,10 +212,15 @@ Suggested indexes:
 - `concerts_starts_at_idx` on `startsAt`.
 - `concerts_status_starts_at_idx` on `(status, startsAt)`.
 - `concerts_interest_level_idx` on `interestLevel`.
-- `concerts_publication_status_idx` on `publicationStatus`.
-- `concerts_needs_human_review_idx` on `needsHumanReview`.
+- `concerts_publication_status_starts_at_idx` on `(publicationStatus, startsAt)`.
+- `concerts_needs_human_review_starts_at_idx` on `(startsAt)` where
+  `needsHumanReview = true`.
 - `concerts_deleted_at_idx` on `deletedAt`.
 - `venues_city_idx` on `city`.
+
+Suggested constraints:
+
+- `CHECK (confidence is null or (confidence >= 0 and confidence <= 1))`.
 
 ### `concert_sources`
 
@@ -339,26 +344,30 @@ LLM agent to use safely.
 - `get_concert_detail`
   - Input: `idOrSlug`.
 
-### Protected/write tools
+### Protected/admin tools
 
-Every mutating tool must require API key protection. Preferred design:
+Admin tools must require API key protection. Preferred design:
 
 - Keep the current public MCP endpoint for read-only tools.
-- Add a protected MCP endpoint, for example `/mcp/admin`, that registers mutating
+- Add a protected MCP endpoint, for example `/mcp/admin`, that registers admin
   tools only after validating `x-api-key`.
 
-Protected tools:
+Protected read tools:
+
+- `list_concerts_for_review` for draft / `needsHumanReview` queues.
+
+Protected write tools:
 
 - `create_concert`
 - `update_concert`
 - `delete_concert`
 - `upsert_concert_from_source`
-- `list_concerts_for_review` for draft / `needsHumanReview` queues
 
 ### LLM-friendly response shape
 
 Protected REST write endpoints and mutating MCP tools should return structured
-results such as:
+results such as. The response `warnings` array is the persisted `agentWarnings`
+array for the affected row, returned under the shorter response name for readability:
 
 ```json
 {
@@ -414,7 +423,7 @@ Moka flagged these fields as often fragile or missing:
 - reliable cancellation or postponement status.
 
 Moka prefers protected MCP admin tools when available because they are easier for
-an agent to call with structured errors and OpenClaw-managed auth. REST remains a
+an agent to call with structured errors and managed `x-api-key` auth. REST remains a
 good fallback for scripts or cron jobs.
 
 Moka-specific edge cases to handle:
