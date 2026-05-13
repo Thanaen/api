@@ -56,8 +56,13 @@ feed together.
 
 - `venues.slug` and `concerts.slug` are server-derived from `name` / `title`, with
   deterministic numeric suffixes for collisions, e.g. `foo`, `foo-2`, `foo-3`.
+- Generated slugs must never be all digits. If slugification produces an all-digit
+  slug, prefix it with the resource type, e.g. `concert-2024` or `venue-404`.
+- `:idOrSlug` resolvers should therefore treat all-digit path parameters as IDs
+  and every other value as a slug.
 - Slugs are immutable once created.
-- `PATCH` does not regenerate a slug when `name` or `title` changes.
+- `PATCH` and `POST /concerts/import` do not regenerate a slug when `name` or
+  `title` changes on an existing record.
 - Importers and MCP clients should not supply slugs in v1. If manual slug editing
   is ever added, it must be an explicit protected operation.
 
@@ -65,6 +70,9 @@ feed together.
 
 - Date-time fields are stored as `timestamptz` and returned on the wire as UTC ISO
   8601 strings.
+- Write inputs must be ISO 8601 date-time strings with either `Z` or an explicit
+  numeric offset, e.g. `2026-06-12T18:00:00Z` or `2026-06-12T20:00:00+02:00`.
+  Naive local strings such as `2026-06-12T20:00:00` are rejected.
 - `timezone` is returned as a separate IANA timezone string, defaulting to
   `Europe/Paris`.
 - Clients, RSS rendering, and MCP consumers should localize display from the UTC
@@ -72,12 +80,20 @@ feed together.
 
 ### Public response envelope
 
-Concert endpoints should follow the existing module convention and return a
-`{ data, lastUpdated }` envelope.
+Concert read endpoints should keep the existing public API's outer
+`{ data, lastUpdated }` envelope, but use concert-specific `lastUpdated`
+semantics because concerts are pushed into the database rather than scraped as a
+single upstream snapshot.
 
 - Collection endpoints: `lastUpdated` is the maximum `updatedAt` among returned
   rows, or the request time for an empty result set.
 - Detail endpoints: `lastUpdated` is the concert row's `updatedAt`.
+- `GET /concerts` adds a concerts-only `pagination` object. This does not create
+  a shared pagination convention for existing modules.
+- Public MCP read tools should return the same envelopes as the corresponding
+  REST read endpoints.
+- Protected REST writes and protected MCP writes should both return the richer
+  mutation result shape documented in [LLM-friendly response shape](#llm-friendly-response-shape).
 - RSS remains XML and does not use this JSON envelope.
 
 ### Public vs private fields
@@ -95,7 +111,8 @@ Concert endpoints should follow the existing module convention and return a
   display, public detail links, and RSS fallback links.
 - Import/upsert operations may set `concerts.sourceUrl` when creating a concert or
   when it is currently empty, but they must not overwrite an existing primary
-  source URL unless the request explicitly asks to replace it.
+  source URL unless the request explicitly asks to replace it with
+  `replacePrimarySourceUrl: true`.
 
 ### Hard deletion and source rows
 
@@ -222,6 +239,7 @@ return a warning.
     pagination.
   - Cursor sort key: upcoming first by `(startsAt, id)`.
   - Response shape: `{ data, lastUpdated, pagination }`.
+  - `pagination` shape: `{ nextCursor: string | null, hasMore: boolean }`.
 - `GET /concerts/:idOrSlug`
   - Returns one non-deleted concert.
   - Accepts either numeric ID or immutable slug.
@@ -241,9 +259,14 @@ such as `CONCERTS_API_KEY` or `ADMIN_API_KEY`.
   - Idempotent create/update from source metadata.
   - Best fit for external discovery systems.
   - Uses source constraints first, then best-effort dedupe.
+  - Does not regenerate slug when an existing concert is updated from an import.
+  - Accepts `replacePrimarySourceUrl: true` to overwrite an existing
+    `concerts.sourceUrl`; otherwise imports only fill it when empty.
 - `PATCH /concerts/:idOrSlug`
   - Partial update.
   - Does not regenerate slug from changed title.
+  - Accepts `replacePrimarySourceUrl: true` when the request intentionally changes
+    an existing primary source URL.
 - `DELETE /concerts/:idOrSlug`
   - Soft-delete by default.
   - Optional future `?hard=true` should remain protected and explicit.
@@ -279,7 +302,8 @@ Protected tools:
 
 ### LLM-friendly response shape
 
-Mutating MCP tools should return structured results such as:
+Protected REST write endpoints and mutating MCP tools should return structured
+results such as:
 
 ```json
 {
