@@ -46,6 +46,9 @@ External systems can discover concerts and push them into this API.
    predictable.
 6. **Keep public identifiers stable.** Slugs and RSS GUIDs must not change because
    an agent edits a title.
+7. **Model importer uncertainty.** Agent-discovered concerts can be incomplete or
+   ambiguous; preserve confidence, warnings, and review state instead of forcing
+   false precision.
 
 ## Cross-cutting decisions
 
@@ -101,8 +104,11 @@ single upstream snapshot.
 - `interestLevel` is intentionally public. The directory is curated around
   Thanaen's interest, and exposing `maybe` / `interested` / `must_go` makes the
   catalogue and RSS more useful.
-- `notes` is private and must not be exposed by public REST endpoints, public MCP
-  tools, or RSS. It may be returned only from protected/admin surfaces.
+- `publicationStatus` controls visibility. Public REST, public MCP, and RSS should
+  expose only `published` concerts by default. Protected/admin surfaces can see
+  `draft` and `archived` concerts.
+- `notes`, `importNotes`, `agentWarnings`, `confidence`, `needsHumanReview`, and
+  source `rawPayload` are private/admin fields unless explicitly promoted later.
 
 ### Primary source URL
 
@@ -120,6 +126,26 @@ Soft delete is the v1 default. If a future hard-delete option is implemented,
 `concert_sources.concertId` should use `on delete restrict`. A hard delete must
 therefore either fail with a clear `409 CONFLICT` while source rows exist or use an
 explicit admin operation that first removes source rows.
+
+### Import uncertainty and review flow
+
+Moka's current concert watch can reliably find titles, dates, venues/cities,
+source URLs, rough styles/tags, and subjective interest, but some fields are often
+missing or fragile: exact prices, doors/end times, stable external IDs, images,
+lineups for festivals, and cancellation/postponement status.
+
+The import contract should therefore support:
+
+- `publicationStatus = draft` when the event should be stored but hidden from
+  public API/RSS until reviewed;
+- `needsHumanReview = true` when dedupe, venue, date, price, status, or geography
+  is uncertain;
+- `confidence` as a coarse global score from `0` to `1` for importer certainty;
+- `agentWarnings` as structured warning codes/messages that can be returned to
+  Moka and stored for later review;
+- `importNotes` as private free-text context from the importer;
+- `regionScope` to encode local filtering decisions such as Pays basque, Sud
+  Landes, or stricter Spain handling.
 
 ## Proposed database tables
 
@@ -144,42 +170,50 @@ Venues are normalized because they are useful for filtering, display, and dedupe
 
 ### `concerts`
 
-| Column           | Type                                   | Notes                                                |
-| ---------------- | -------------------------------------- | ---------------------------------------------------- |
-| `id`             | `serial primary key`                   | Internal concert ID.                                 |
-| `slug`           | `text not null unique`                 | Server-derived, immutable URL-friendly identifier.   |
-| `title`          | `text not null`                        | Human-readable event title.                          |
-| `headlineArtist` | `text`                                 | Main artist when obvious.                            |
-| `artists`        | `jsonb not null default '[]'`          | Array of `{ name, role? }`. Keeps v1 simple.         |
-| `description`    | `text`                                 | Public description.                                  |
-| `startsAt`       | `timestamptz not null`                 | Main event start instant. Returned as UTC ISO.       |
-| `endsAt`         | `timestamptz`                          | Optional end instant. Returned as UTC ISO.           |
-| `doorsAt`        | `timestamptz`                          | Optional doors opening instant. Returned as UTC ISO. |
-| `timezone`       | `text not null default 'Europe/Paris'` | IANA timezone for display localization.              |
-| `venueId`        | `integer references venues(id)`        | Optional until venue is known.                       |
-| `status`         | `text not null default 'scheduled'`    | See enum below.                                      |
-| `interestLevel`  | `text not null default 'interested'`   | Public curated interest level. See enum below.       |
-| `genres`         | `jsonb not null default '[]'`          | Array of strings.                                    |
-| `tags`           | `jsonb not null default '[]'`          | Agent/user-defined labels.                           |
-| `ticketUrl`      | `text`                                 | Ticketing URL.                                       |
-| `sourceUrl`      | `text`                                 | Curator-controlled primary public source URL.        |
-| `imageUrl`       | `text`                                 | Poster/cover image URL.                              |
-| `priceMin`       | `numeric(10,2)`                        | Optional structured price.                           |
-| `priceMax`       | `numeric(10,2)`                        | Optional structured price.                           |
-| `priceCurrency`  | `text not null default 'EUR'`          | Currency for structured prices.                      |
-| `priceText`      | `text`                                 | Human-readable fallback, e.g. `12€ / 15€ sur place`. |
-| `notes`          | `text`                                 | Private/editorial notes for protected surfaces only. |
-| `discoveredAt`   | `timestamptz not null default now()`   | First discovery time.                                |
-| `lastSeenAt`     | `timestamptz`                          | Last importer confirmation.                          |
-| `createdAt`      | `timestamptz not null default now()`   | Audit field and RSS `pubDate`.                       |
-| `updatedAt`      | `timestamptz not null default now()`   | Audit field and JSON `lastUpdated` source.           |
-| `deletedAt`      | `timestamptz`                          | Soft-delete marker.                                  |
+| Column              | Type                                   | Notes                                                |
+| ------------------- | -------------------------------------- | ---------------------------------------------------- |
+| `id`                | `serial primary key`                   | Internal concert ID.                                 |
+| `slug`              | `text not null unique`                 | Server-derived, immutable URL-friendly identifier.   |
+| `title`             | `text not null`                        | Human-readable event title.                          |
+| `headlineArtist`    | `text`                                 | Main artist when obvious.                            |
+| `artists`           | `jsonb not null default '[]'`          | Array of `{ name, role? }`. Keeps v1 simple.         |
+| `description`       | `text`                                 | Public description.                                  |
+| `startsAt`          | `timestamptz not null`                 | Main event start instant. Returned as UTC ISO.       |
+| `endsAt`            | `timestamptz`                          | Optional end instant. Returned as UTC ISO.           |
+| `doorsAt`           | `timestamptz`                          | Optional doors opening instant. Returned as UTC ISO. |
+| `timezone`          | `text not null default 'Europe/Paris'` | IANA timezone for display localization.              |
+| `venueId`           | `integer references venues(id)`        | Optional until venue is known.                       |
+| `status`            | `text not null default 'scheduled'`    | See enum below.                                      |
+| `publicationStatus` | `text not null default 'draft'`        | Public visibility. See enum below.                   |
+| `interestLevel`     | `text not null default 'interested'`   | Public curated interest level. See enum below.       |
+| `regionScope`       | `text`                                 | Local scope/category for geography filtering.        |
+| `confidence`        | `numeric(3,2)`                         | Importer certainty from `0` to `1`.                  |
+| `needsHumanReview`  | `boolean not null default false`       | Whether an admin/agent should review before publish. |
+| `genres`            | `jsonb not null default '[]'`          | Array of strings.                                    |
+| `tags`              | `jsonb not null default '[]'`          | Agent/user-defined labels.                           |
+| `ticketUrl`         | `text`                                 | Ticketing URL.                                       |
+| `sourceUrl`         | `text`                                 | Curator-controlled primary public source URL.        |
+| `imageUrl`          | `text`                                 | Poster/cover image URL.                              |
+| `priceMin`          | `numeric(10,2)`                        | Optional structured price.                           |
+| `priceMax`          | `numeric(10,2)`                        | Optional structured price.                           |
+| `priceCurrency`     | `text not null default 'EUR'`          | Currency for structured prices.                      |
+| `priceText`         | `text`                                 | Human-readable fallback, e.g. `12€ / 15€ sur place`. |
+| `notes`             | `text`                                 | Private/editorial notes for protected surfaces only. |
+| `importNotes`       | `text`                                 | Private importer notes, not public.                  |
+| `agentWarnings`     | `jsonb not null default '[]'`          | Structured private warning codes/messages.           |
+| `discoveredAt`      | `timestamptz not null default now()`   | First discovery time.                                |
+| `lastSeenAt`        | `timestamptz`                          | Last importer confirmation.                          |
+| `createdAt`         | `timestamptz not null default now()`   | Audit field and RSS `pubDate`.                       |
+| `updatedAt`         | `timestamptz not null default now()`   | Audit field and JSON `lastUpdated` source.           |
+| `deletedAt`         | `timestamptz`                          | Soft-delete marker.                                  |
 
 Suggested indexes:
 
 - `concerts_starts_at_idx` on `startsAt`.
 - `concerts_status_starts_at_idx` on `(status, startsAt)`.
 - `concerts_interest_level_idx` on `interestLevel`.
+- `concerts_publication_status_idx` on `publicationStatus`.
+- `concerts_needs_human_review_idx` on `needsHumanReview`.
 - `concerts_deleted_at_idx` on `deletedAt`.
 - `venues_city_idx` on `city`.
 
@@ -188,19 +222,20 @@ Suggested indexes:
 A separate table keeps source/import metadata extensible and supports multiple
 sources pointing to the same curated concert.
 
-| Column        | Type                                                          | Notes                                                            |
-| ------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `id`          | `serial primary key`                                          | Internal source row ID.                                          |
-| `concertId`   | `integer not null references concerts(id) on delete restrict` | Curated concert.                                                 |
-| `sourceName`  | `text not null`                                               | Importer/source name, e.g. `facebook`, `venue-site`, `songkick`. |
-| `externalId`  | `text`                                                        | Source-specific stable ID when available.                        |
-| `sourceUrl`   | `text`                                                        | Source URL used by importer.                                     |
-| `contentHash` | `text`                                                        | Hash of normalized relevant source content.                      |
-| `rawPayload`  | `jsonb`                                                       | Original source payload or extracted data.                       |
-| `firstSeenAt` | `timestamptz not null default now()`                          | First source sighting.                                           |
-| `lastSeenAt`  | `timestamptz not null default now()`                          | Last source sighting.                                            |
-| `createdAt`   | `timestamptz not null default now()`                          | Audit field.                                                     |
-| `updatedAt`   | `timestamptz not null default now()`                          | Audit field.                                                     |
+| Column           | Type                                                          | Notes                                                            |
+| ---------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `id`             | `serial primary key`                                          | Internal source row ID.                                          |
+| `concertId`      | `integer not null references concerts(id) on delete restrict` | Curated concert.                                                 |
+| `sourceName`     | `text not null`                                               | Importer/source name, e.g. `facebook`, `venue-site`, `songkick`. |
+| `externalId`     | `text`                                                        | Source-specific stable ID when available.                        |
+| `sourceUrl`      | `text`                                                        | Source URL used by importer.                                     |
+| `contentHash`    | `text`                                                        | Hash of normalized relevant source content.                      |
+| `sourcePriority` | `integer not null default 100`                                | Lower number wins when source data conflicts.                    |
+| `rawPayload`     | `jsonb`                                                       | Original source payload or extracted data.                       |
+| `firstSeenAt`    | `timestamptz not null default now()`                          | First source sighting.                                           |
+| `lastSeenAt`     | `timestamptz not null default now()`                          | Last source sighting.                                            |
+| `createdAt`      | `timestamptz not null default now()`                          | Audit field.                                                     |
+| `updatedAt`      | `timestamptz not null default now()`                          | Audit field.                                                     |
 
 Suggested constraints:
 
@@ -227,21 +262,37 @@ return a warning.
 - `interested` — default curated interest.
 - `must_go` — high priority.
 
+### `PublicationStatus`
+
+- `draft` — stored for review but hidden from public API/RSS by default.
+- `published` — visible in public API/RSS.
+- `archived` — hidden from default public listings without being deleted.
+
+### `RegionScope`
+
+Initial values can stay string-based until geography is better understood, but
+Moka identified these useful buckets:
+
+- `pays_basque`
+- `sud_landes`
+- `spain_priority_only`
+- `other`
+
 ## REST API plan
 
 ### Public read endpoints
 
 - `GET /concerts`
-  - Defaults to future, non-deleted concerts.
+  - Defaults to future, published, non-deleted concerts.
   - Query filters: `from`, `to`, `city`, `venueId`, `status`, `interestLevel`,
-    `tag`, `includePast`.
+    `regionScope`, `tag`, `includePast`.
   - Pagination: `limit` with default `50` and max `100`; `cursor` for stable
     pagination.
   - Cursor sort key: upcoming first by `(startsAt, id)`.
   - Response shape: `{ data, lastUpdated, pagination }`.
   - `pagination` shape: `{ nextCursor: string | null, hasMore: boolean }`.
 - `GET /concerts/:idOrSlug`
-  - Returns one non-deleted concert.
+  - Returns one published, non-deleted concert.
   - Accepts either numeric ID or immutable slug.
   - Response shape: `{ data, lastUpdated }`.
 - `GET /concerts/feed.xml` or `GET /concerts.rss`
@@ -262,6 +313,8 @@ such as `CONCERTS_API_KEY` or `ADMIN_API_KEY`.
   - Does not regenerate slug when an existing concert is updated from an import.
   - Accepts `replacePrimarySourceUrl: true` to overwrite an existing
     `concerts.sourceUrl`; otherwise imports only fill it when empty.
+  - Accepts importer uncertainty fields: `confidence`, `agentWarnings`,
+    `importNotes`, `needsHumanReview`, `publicationStatus`, and `regionScope`.
 - `PATCH /concerts/:idOrSlug`
   - Partial update.
   - Does not regenerate slug from changed title.
@@ -282,6 +335,7 @@ LLM agent to use safely.
 
 - `list_concerts`
   - Filters and pagination mirror `GET /concerts`.
+  - Public tool returns published concerts only by default.
 - `get_concert_detail`
   - Input: `idOrSlug`.
 
@@ -299,6 +353,7 @@ Protected tools:
 - `update_concert`
 - `delete_concert`
 - `upsert_concert_from_source`
+- `list_concerts_for_review` for draft / `needsHumanReview` queues
 
 ### LLM-friendly response shape
 
@@ -310,7 +365,9 @@ results such as:
   "ok": true,
   "action": "created",
   "concert": {},
-  "warnings": [],
+  "warnings": [{ "code": "MISSING_PRICE", "message": "No reliable price found in source." }],
+  "needsHumanReview": false,
+  "confidence": 0.86,
   "dedupeDecision": {
     "matchedBy": "sourceName+externalId",
     "existingConcertId": null
@@ -332,22 +389,44 @@ Errors should also be structured and actionable:
 
 ## Moka integration check
 
-Moka is expected to be the first automated consumer/writer for this feature. Before
-implementing the schema and endpoints, validate the contract against Moka's current
-concert-watching workflow:
+Moka is expected to be the first automated consumer/writer for this feature. A
+first sync confirmed the design is **OK with minor adjustments**.
 
-- which source fields Moka can reliably provide (`sourceName`, `externalId`,
-  `sourceUrl`, raw payload, content hash);
-- whether Moka already normalizes date-times and venues, or needs the API to accept
-  partial venue data during import;
-- whether Moka needs batch import in v1 or can call one upsert per concert;
-- whether the protected MCP admin tools are enough, or whether Moka will prefer the
-  REST endpoints directly;
-- which response warnings and `nextSuggestedAction` values would help Moka recover
-  from ambiguous dedupe, missing venue, missing price, or suspicious dates.
+Moka can reliably provide:
 
-Keep this section updated after the first Moka sync so implementation work starts
-from the real consumer's needs rather than assumptions.
+- title and approximate headline artist;
+- start date/time when available, usually local source time;
+- venue and city;
+- source/ticket URL when stable;
+- rough genres/tags;
+- short description;
+- subjective interest level for Thanaen;
+- discovery and last-seen timestamps.
+
+Moka flagged these fields as often fragile or missing:
+
+- end time and doors time;
+- exact price and sold-out state;
+- stable external ID;
+- image URL;
+- source-provided timezone;
+- complete lineup for festivals / multi-band evenings;
+- reliable cancellation or postponement status.
+
+Moka prefers protected MCP admin tools when available because they are easier for
+an agent to call with structured errors and OpenClaw-managed auth. REST remains a
+good fallback for scripts or cron jobs.
+
+Moka-specific edge cases to handle:
+
+- same concert appears through both venue and ticketing sources;
+- titles vary across sources, especially `artist + guests`, themed evenings, and
+  festivals;
+- reported concerts can keep the same URL while date/status changes;
+- cancellations can be silent;
+- some sources lack stable URLs;
+- multi-day festivals may need one concert per day/session;
+- Spain should be imported only for high-interest events, not blindly.
 
 ## RSS feed decisions
 
@@ -363,6 +442,7 @@ Recommended fields:
   if `discoveredAt` was back-dated by an importer.
 - Item description: date, venue, price, artists, public interest level, tags, and
   source link.
+- Only `published` concerts are included by default.
 
 Default feed order should be discovery/insert order (`createdAt desc`) because
 feed readers are optimized around newly published items. Public API list endpoints
@@ -372,5 +452,7 @@ should sort by event date for planning.
 
 - Exact API key environment variable name: `CONCERTS_API_KEY` vs `ADMIN_API_KEY`.
 - Whether venue creation should be separate or embedded in concert create/upsert.
-- Which nearby geography is considered “in the area” for default filtering.
-- Validate this contract against Moka's existing concert-watching workflow.
+- Whether Moka needs batch import in v1 or one upsert per concert is enough.
+- Exact default geography behind `regionScope` values and public filters.
+- Whether imports should default to `draft` or allow selected trusted sources to
+  create `published` concerts directly.
