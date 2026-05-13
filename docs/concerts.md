@@ -330,6 +330,25 @@ Errors should also be structured and actionable:
 }
 ```
 
+## Moka integration check
+
+Moka is expected to be the first automated consumer/writer for this feature. Before
+implementing the schema and endpoints, validate the contract against Moka's current
+concert-watching workflow:
+
+- which source fields Moka can reliably provide (`sourceName`, `externalId`,
+  `sourceUrl`, raw payload, content hash);
+- whether Moka already normalizes date-times and venues, or needs the API to accept
+  partial venue data during import;
+- whether Moka needs batch import in v1 or can call one upsert per concert;
+- whether the protected MCP admin tools are enough, or whether Moka will prefer the
+  REST endpoints directly;
+- which response warnings and `nextSuggestedAction` values would help Moka recover
+  from ambiguous dedupe, missing venue, missing price, or suspicious dates.
+
+Keep this section updated after the first Moka sync so implementation work starts
+from the real consumer's needs rather than assumptions.
+
 ## RSS feed decisions
 
 RSS should target human consumption and simple automation.
@@ -354,3 +373,4 @@ should sort by event date for planning.
 - Exact API key environment variable name: `CONCERTS_API_KEY` vs `ADMIN_API_KEY`.
 - Whether venue creation should be separate or embedded in concert create/upsert.
 - Which nearby geography is considered “in the area” for default filtering.
+- Validate this contract against Moka's existing concert-watching workflow.
