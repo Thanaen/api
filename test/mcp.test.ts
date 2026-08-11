@@ -103,4 +103,40 @@ describe("MCP transport", () => {
 
     expect(rejection).toBeInstanceOf(Error);
   });
+
+  test.each([
+    "https://thanaen.dev/path",
+    "https://thanaen.dev?query=value",
+    "https://thanaen.dev#fragment",
+    "https://user:password@thanaen.dev",
+    "null",
+  ])("rejects malformed browser origin %s", async (origin) => {
+    const response = await app.handle(
+      new Request("http://test.local/mcp/", {
+        method: "OPTIONS",
+        headers: {
+          origin,
+          "access-control-request-method": "POST",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+
+    const post = await app.handle(
+      new Request("http://test.local/mcp/", {
+        method: "POST",
+        headers: {
+          origin,
+          "content-type": "application/json",
+          "mcp-protocol-version": "2026-07-28",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "server/discover", params: {} }),
+      }),
+    );
+
+    expect(post.status).toBe(403);
+    expect(post.headers.get("access-control-allow-origin")).toBeNull();
+  });
 });
