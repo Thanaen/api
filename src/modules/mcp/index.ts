@@ -39,7 +39,7 @@ const allowedOriginHostnames = [
 
 function malformedOriginResponse(request: Request): Response | undefined {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (origin === null) return;
 
   try {
     const parsed = new URL(origin);
@@ -73,7 +73,7 @@ async function handleWithValidatedOrigin(
 
   const response = await handler();
   const origin = request.headers.get("origin");
-  if (!origin) return response;
+  if (origin === null) return response;
 
   const headers = new Headers(response.headers);
   headers.set("access-control-allow-origin", origin);

@@ -117,6 +117,7 @@ describe("MCP transport", () => {
     "https://thanaen.dev#fragment",
     "https://user:password@thanaen.dev",
     "null",
+    "",
   ])("rejects malformed browser origin %s", async (origin) => {
     const response = await app.handle(
       new Request("http://test.local/mcp/", {
