@@ -96,6 +96,24 @@ export const mcp = new Elysia({ name: "mcp", prefix: "/mcp" })
     ({ request }) => handleWithValidatedOrigin(request, () => new Response(null, { status: 204 })),
     { detail: { hide: true } },
   )
+  .get(
+    "/",
+    ({ request }) =>
+      handleWithValidatedOrigin(
+        request,
+        () => new Response(null, { status: 405, headers: { allow: "POST, OPTIONS" } }),
+      ),
+    { detail: { hide: true } },
+  )
+  .delete(
+    "/",
+    ({ request }) =>
+      handleWithValidatedOrigin(
+        request,
+        () => new Response(null, { status: 405, headers: { allow: "POST, OPTIONS" } }),
+      ),
+    { detail: { hide: true } },
+  )
   .post("/", ({ request }) => handleWithValidatedOrigin(request, () => mcpHandler.fetch(request)), {
     detail: { hide: true },
   });

@@ -58,6 +58,13 @@ describe("MCP transport", () => {
     expect(rejection).toBeInstanceOf(Error);
   });
 
+  test.each(["GET", "DELETE"])("rejects legacy %s transport requests", async (method) => {
+    const response = await app.handle(new Request("http://test.local/mcp/", { method }));
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("POST, OPTIONS");
+  });
+
   test("accepts a modern browser CORS preflight", async () => {
     const response = await app.handle(
       new Request("http://test.local/mcp/", {
