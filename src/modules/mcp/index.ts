@@ -29,7 +29,7 @@ function createMcpServer(): McpServer {
   return server;
 }
 
-const mcpHandler = createMcpHandler(createMcpServer, { legacy: "reject" });
+const mcpHandler = createMcpHandler(createMcpServer, { legacy: "stateless" });
 const allowedOriginHostnames = [
   ...localhostAllowedOrigins(),
   "api.thanaen.dev",

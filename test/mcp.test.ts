@@ -11,6 +11,7 @@ afterEach(async () => {
 });
 
 function createClient(modern: boolean, origin?: string) {
+  const responses: Response[] = [];
   const client = new Client(
     { name: modern ? "modern-test" : "legacy-test", version: "1.0.0" },
     modern ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : undefined,
@@ -21,11 +22,14 @@ function createClient(modern: boolean, origin?: string) {
     fetch: (url, init) => {
       const request = new Request(url, init);
       if (origin) request.headers.set("origin", origin);
-      return app.handle(request);
+      return app.handle(request).then((response) => {
+        responses.push(response.clone());
+        return response;
+      });
     },
   });
 
-  return { client, transport };
+  return { client, transport, responses };
 }
 
 describe("MCP transport", () => {
@@ -45,20 +49,22 @@ describe("MCP transport", () => {
     expect(result.cacheScope).toBe("public");
   });
 
-  test("rejects legacy protocol clients", async () => {
-    const { client, transport } = createClient(false);
-    let rejection: unknown;
+  test("serves legacy protocol clients without a session", async () => {
+    const { client, transport, responses } = createClient(false);
+    await client.connect(transport);
 
-    try {
-      await client.connect(transport);
-    } catch (error) {
-      rejection = error;
-    }
+    const result = await client.listTools();
 
-    expect(rejection).toBeInstanceOf(Error);
+    expect(result.tools.map((tool) => tool.name)).toEqual([
+      "list_paniers",
+      "get_panier_detail",
+      "list_cinema_movies",
+      "get_cinema_movie_detail",
+    ]);
+    expect(responses.every((response) => !response.headers.has("mcp-session-id"))).toBe(true);
   });
 
-  test.each(["GET", "DELETE"])("rejects legacy %s transport requests", async (method) => {
+  test.each(["GET", "DELETE"])("rejects session-oriented %s requests", async (method) => {
     const response = await app.handle(new Request("http://test.local/mcp/", { method }));
 
     expect(response.status).toBe(405);
