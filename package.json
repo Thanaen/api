@@ -25,25 +25,25 @@
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
-    "@elysiajs/openapi": "^1.4.14",
-    "@modelcontextprotocol/server": "^2.0.0",
-    "@neondatabase/serverless": "^1.0.2",
+    "@elysiajs/openapi": "^1.4.16",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "@neondatabase/serverless": "^1.2.0",
     "@sinclair/typebox": ">= 0.34.0 < 1",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.4",
     "elysia": "latest",
     "node-html-parser": "^7.1.0",
-    "posthog-node": "^5.29.2",
-    "zod": "^4.2.0"
+    "posthog-node": "^5.55.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.0.0",
-    "@posthog/cli": "^0.7.4",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@posthog/cli": "^0.18.10",
     "bun-types": "latest",
-    "drizzle-kit": "^0.31.10",
-    "lefthook": "^2.1.4",
-    "oxfmt": "^0.42.0",
-    "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.18.1",
-    "tsdown": "^0.21.7"
+    "drizzle-kit": "^0.31.11",
+    "lefthook": "^2.2.1",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^0.25.0",
+    "tsdown": "^0.23.0"
   }
 }
