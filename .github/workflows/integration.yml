@@ -12,13 +12,13 @@ jobs:
   scraper-health:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run test:integration
       - name: Create issue on failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const label = "scraper-health";
