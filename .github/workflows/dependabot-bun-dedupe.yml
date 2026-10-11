@@ -1,0 +1,19 @@
+name: Dependabot bun dedupe
+
+on:
+  pull_request:
+    paths: [bun.lock]
+
+permissions:
+  contents: read
+
+jobs:
+  dedupe:
+    # Only Dependabot's own pushes: the dedupe commit comes from the bot App and
+    # must not rerun this job.
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: Thanaen/repo-maintenance/.github/workflows/dependabot-bun-dedupe.yml@main
+    secrets:
+      # Dependabot secrets: Dependabot-triggered runs receive no Actions secrets.
+      app_client_id: ${{ secrets.BOT_APP_CLIENT_ID }}
+      app_private_key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
